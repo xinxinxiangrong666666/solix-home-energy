@@ -2391,16 +2391,18 @@
     const curve = new THREE.CurvePath();
     for (let index = 1; index < route.length; index += 1) curve.add(new THREE.LineCurve3(route[index - 1], route[index]));
     const tubeMaterial = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3, depthWrite: false });
-    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 74, 0.018, 8, false), tubeMaterial);
-    root.add(tube);
-    const particleMaterial = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.96, depthWrite: false });
-    const particles = Array.from({ length: 12 }, (_, index) => {
-      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.042, 10, 10), particleMaterial);
-      mesh.visible = false;
-      root.add(mesh);
-      return { mesh, offset: index / 12 };
-    });
-    return { key, curve, tube, particles };
+        /* 卡顿优化（2026-09-26 深度版）：TubeGeometry 分段 74→46、截面 8→6（视觉无差、顶点 -50%+）；
+         * 粒子 12→8 粒/条（6 条流×每帧 getPointAt 72→48 次）， SphereGeometry 10 段→8 段。 */
+        const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 46, 0.018, 6, false), tubeMaterial);
+        root.add(tube);
+        const particleMaterial = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.96, depthWrite: false });
+        const particles = Array.from({ length: 8 }, (_, index) => {
+          const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.042, 8, 8), particleMaterial);
+          mesh.visible = false;
+          root.add(mesh);
+          return { mesh, offset: index / 8 };
+        });
+        return { key, curve, tube, particles };
   }
 
   function makeTextPlate(title, subtitle) {
@@ -3038,6 +3040,14 @@
       // P1-2: Solarbank 状态灯呼吸 + P1-3 后期合成输出
       if (batteryFrontGlowMaterial) {
         batteryFrontGlowMaterial.opacity = 0.55 + Math.sin(elapsed * 2.2) * 0.3;
+      }
+      /* 黑屏窗口治理（2026-09-26）：loader 在首帧真正出画后才隐藏。
+       * 此前 init 同步尾部就 hidden loader——纹理/模型还在路上，用户看到的是
+       * 渐变底+空 canvas 的"黑屏窗口"；现在首帧渲染完成后才撤 loader，无黑窗。 */
+      if (!loop.loaderHidden) {
+        loop.loaderHidden = true;
+        const loaderEl = document.querySelector("#scene-loader");
+        if (loaderEl) loaderEl.hidden = true;
       }
       if (batteryScreenGlow) {
         batteryScreenGlow.material.opacity = 0.72 + Math.sin(elapsed * 1.6) * 0.2;
