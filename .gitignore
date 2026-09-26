@@ -1,0 +1,13 @@
+.hermes/
+_audit/
+_deploy_excluded/
+_tmp_tesla_studio/
+_tmp_tesla_studio.zip
+*.test.js
+energy-lp.test.py
+gpu-diag.html
+serve.py
+.llm-key
+.env
+竞品3D调研与官网升级说明_20260920.md
+_extra/
