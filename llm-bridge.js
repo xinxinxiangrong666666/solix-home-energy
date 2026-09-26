@@ -23,7 +23,13 @@
   const say = (zh, en) => (english() ? en : zh);
 
   function requested() {
-    try { return localStorage.getItem(SWITCH_KEY) === "on"; } catch (_) { return false; }
+    /* 云端默认开（2026-10-01 用户指令）：新访客未做过选择时默认 on。
+     * 隐私边界不变——只有真正提问时才发送数据，且页面明示发送范围；
+     * 用户关一次即写入 "off"，之后永远尊重用户选择。 */
+    try {
+      const stored = localStorage.getItem(SWITCH_KEY);
+      return stored === null ? true : stored === "on";
+    } catch (_) { return true; }
   }
 
   function persist(on) {

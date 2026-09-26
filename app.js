@@ -331,7 +331,14 @@
 
   const state = {
     devices: loadDevices(),
-    lang: localStorage.getItem(LANGUAGE_KEY) === "en" ? "en" : "zh",
+    /* 语言默认英文（2026-10-01 用户指令）：新访客默认 en；手动切过语言的用户尊重其选择。
+     * 存过任意值（"en"/"zh"）→ 按存储值；没存过 → en。 */
+    lang: (() => {
+      try {
+        const stored = localStorage.getItem(LANGUAGE_KEY);
+        return stored === "zh" ? "zh" : "en";
+      } catch (_) { return "en"; }
+    })(),
     weather: "clear",
     strategy: "auto",
     deckView: "power",
