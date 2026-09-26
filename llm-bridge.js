@@ -6,11 +6,16 @@
 
   const ENDPOINT = "/api/chat";
   const HEALTH_ENDPOINT = "/api/health";
+  // 云端 Worker（2026-09-26）：静态托管（GitHub Pages）无服务端，/api/chat 走
+  // Cloudflare Worker 代理。本地 serve.py 优先（同源健康检查通过即用本地）。
+  const REMOTE_ENDPOINT = "https://solix-energy-llm.qianhuayikai.workers.dev/api/chat";
+  const REMOTE_HEALTH = "https://solix-energy-llm.qianhuayikai.workers.dev/api/health";
   // A new key makes older default-on preferences ineligible for cloud opt-in.
   const SWITCH_KEY = "solix-cloud-explanation-v2";
   const HISTORY_KEY = "solix-llm-history";
   let availability = "local";
   let lastFailure = "";
+  let remoteMode = false; // true = 走 Cloudflare Worker（静态托管场景）
   const activeRequests = new Set();
 
   const byId = (id) => document.getElementById(id);
@@ -69,16 +74,39 @@
   }
 
   async function checkAvailability() {
+    // 直连模式（比赛临时方案）：前端自带 ARK 配置时跳过 /api/health 探测，
+    // 直接把云端置为可用。合规边界不变（LLM 只收证据+问题，只回文字）。
+    const direct = window.LLM_DIRECT;
+    if (direct && direct.enabled && direct.apiKey && direct.endpoint) {
+      availability = "ready";
+      lastFailure = "";
+      paint();
+      return true;
+    }
     availability = "checking";
     paint();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
+    // 本地代理优先；本地不通（静态托管）再探远程 Worker
     try {
       const response = await fetch(HEALTH_ENDPOINT, { cache: "no-store", signal: controller.signal });
       if (!response.ok) throw new Error("proxy-unavailable");
       const health = await response.json();
       if (health.ready !== true) throw new Error("proxy-not-configured");
       availability = "ready";
+      lastFailure = "";
+      paint();
+      return true;
+    } catch (_) { /* 落到远程探测 */ }
+    try {
+      const remoteTimeout = setTimeout(() => controller.abort(), 8000);
+      const response = await fetch(REMOTE_HEALTH, { cache: "no-store", signal: controller.signal });
+      clearTimeout(remoteTimeout);
+      if (!response.ok) throw new Error("remote-unavailable");
+      const health = await response.json();
+      if (health.ready !== true) throw new Error("remote-not-configured");
+      availability = "ready";
+      remoteMode = true;
       lastFailure = "";
       paint();
       return true;
@@ -159,32 +187,65 @@
       ...history,
       { role: "user", content: question },
     ];
+    // 直连模式（比赛临时方案，用户 2026-09-26 确认）：GitHub Pages 无服务端，
+    // 由前端持 key 直打 ARK。合规边界不变：LLM 只收证据 JSON + 问题，只回文字。
+    const direct = window.LLM_DIRECT;
+    const useDirect = !!(direct && direct.enabled && direct.apiKey && direct.endpoint);
+    // 端点选择：直连 > 远程 Worker（静态托管）> 同源本地代理
+    const endpoint = useDirect ? direct.endpoint : (remoteMode ? REMOTE_ENDPOINT : ENDPOINT);
+    const headers = useDirect
+      ? { "Content-Type": "application/json", "Authorization": `Bearer ${direct.apiKey}` }
+      : { "Content-Type": "application/json" };
+    const extraBody = useDirect ? { model: direct.model } : {};
     const controller = new AbortController();
     activeRequests.add(controller);
     const timeout = setTimeout(() => controller.abort(), 45000);
     try {
       // 打字机（2026-09-26）：请求流式响应，每收到一段就回调 onDelta 喂给消息体。
       // 合规不变：流里只有 GLM 的解释文字，没有工具调用、没有设备指令。
-      const resp = await fetch(ENDPOINT, {
+      const resp = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages, max_tokens: 2400, stream: true }),
+        headers,
+        body: JSON.stringify({ messages, max_tokens: 2400, stream: true, ...extraBody }),
         signal: controller.signal,
       });
       if (!resp.ok) throw new Error("proxy-error");
       const ctype = resp.headers.get("Content-Type") || "";
       let full = "";
-      if (resp.body && typeof resp.body.getReader === "function" && ctype.includes("text/plain")) {
+      const isSSE = ctype.includes("text/plain") || ctype.includes("text/event-stream");
+      if (resp.body && typeof resp.body.getReader === "function" && (isSSE || useDirect)) {
         const reader = resp.body.getReader();
         const decoder = new TextDecoder("utf-8");
+        let sseBuf = "";
         for (;;) {
           const { value, done } = await reader.read();
           if (done) break;
           const piece = decoder.decode(value, { stream: true });
           if (piece.includes("STREAM_EMPTY")) break; // 上游没吐内容 → 走降级
-          full += piece;
-          if (piece && typeof onDelta === "function") {
-            try { onDelta(piece); } catch (e) { /* 渲染失败不影响收流 */ }
+          // 直连 ARK 时上游是 SSE（data: {...}），解析出 delta.content 再喂打字机
+          if (useDirect && (ctype.includes("event-stream") || piece.includes("data:"))) {
+            sseBuf += piece;
+            let idx;
+            while ((idx = sseBuf.indexOf("\n")) >= 0) {
+              const line = sseBuf.slice(0, idx).trim();
+              sseBuf = sseBuf.slice(idx + 1);
+              if (!line.startsWith("data:")) continue;
+              const chunk = line.slice(5).trim();
+              if (!chunk || chunk === "[DONE]") continue;
+              try {
+                const evt = JSON.parse(chunk);
+                const delta = (evt.choices?.[0]?.delta?.content) || "";
+                if (delta) {
+                  full += delta;
+                  if (typeof onDelta === "function") { try { onDelta(delta); } catch (e) {} }
+                }
+              } catch (e) { /* 半行等待下一块 */ }
+            }
+          } else {
+            full += piece;
+            if (piece && typeof onDelta === "function") {
+              try { onDelta(piece); } catch (e) { /* 渲染失败不影响收流 */ }
+            }
           }
         }
       } else {
