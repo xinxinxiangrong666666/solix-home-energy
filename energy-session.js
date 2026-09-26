@@ -175,6 +175,11 @@
 
   /* ---------- ③ 滚动求解（每模拟 15min 重解一次） ---------- */
   function solveIfDue(simMinute, socPct, solarFactor, currentHomeLoadKw, currentSolarKw, reservePct) {
+    /* 开场死零根因修复（2026-09-26）：simMinute 未对齐 15min 格时，LP 把首格当
+     * 完整 0.25h 计算，但真实覆盖 <15min → 首格动作经济性差，LP 永远把动作推到
+     * 第 1 格之后，新访客开场看到一排 0.00。对齐到格起点后首格即正常参与调度。 */
+    const alignedMinute = Math.floor(simMinute / DT_MIN) * DT_MIN;
+    simMinute = alignedMinute;
     const slot = Math.floor(simMinute / DT_MIN);
     if (slot === session.lastSolveMinute && session.lastPlan) return session.lastPlan;
     session.lastSolveMinute = slot;

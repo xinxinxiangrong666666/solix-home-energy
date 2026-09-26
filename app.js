@@ -335,7 +335,9 @@
     weather: "clear",
     strategy: "auto",
     deckView: "power",
-    simMinute: 10 * 60 + 0, /* 初始 10:00：60x 速度下有 9.5 真实分钟的白天窗口再入夜 */
+    simMinute: 17 * 60 + 35, /* 初始 17:35（2026-09-26 体检）：正值晚峰放电窗——LP 开场即安排放电套利，
+                              * 仪表盘数字立刻动起来。旧值 10:00 落在光伏低谷+高 SOC，LP 最优解是
+                              * 待机 3.75 真实分钟，新访客面对一排 0.00 像 bug（实测 firstAction=第15格）。 */
     speed: 60,
     paused: false,
     soc: 62,
