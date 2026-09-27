@@ -32,7 +32,7 @@
     ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: true };
   let evidenceSequence = 0;
 
-  function recordEvidence(simMinute, socPct, input, result) {
+  function recordEvidence(simMinute, socPct, input, result, weather) {
     const plan = result.status === "ok" ? result.plan : null;
     const head = plan?.[0] || null;
     const last = plan?.at(-1) || null;
@@ -50,6 +50,7 @@
       recordedAt: new Date().toISOString(),
       source: "browser-synthetic-lp",
       site: "demo-site-1",
+      weather: weather || null, /* 天气守护标注（2026-09-27）：storm/snow 时 LP 仍求解，但动作被守护逻辑覆盖，未执行 */
       status: result.status,
       input: {
         socPct,
@@ -174,7 +175,7 @@
   }
 
   /* ---------- ③ 滚动求解（每模拟 15min 重解一次） ---------- */
-  function solveIfDue(simMinute, socPct, solarFactor, currentHomeLoadKw, currentSolarKw, reservePct) {
+  function solveIfDue(simMinute, socPct, solarFactor, currentHomeLoadKw, currentSolarKw, reservePct, weather) {
     /* 开场死零根因修复（2026-09-26）：simMinute 未对齐 15min 格时，LP 把首格当
      * 完整 0.25h 计算，但真实覆盖 <15min → 首格动作经济性差，LP 永远把动作推到
      * 第 1 格之后，新访客开场看到一排 0.00。对齐到格起点后首格即正常参与调度。 */
@@ -186,7 +187,7 @@
     if (!window.EnergyLP) { session.lastPlan = null; return null; }
     const input = buildLpInput(simMinute, socPct, solarFactor, currentHomeLoadKw, currentSolarKw, reservePct);
     const result = window.EnergyLP.planHorizon(input);
-    recordEvidence(simMinute, socPct, input, result);
+    recordEvidence(simMinute, socPct, input, result, weather);
     session.lastPlan = result.status === "ok" ? result : null;
     if (session.lastPlan) session.lastPlan.input = input;
     return session.lastPlan;
@@ -315,14 +316,14 @@
         : (zh ? `目标 ${session.targetSocPct}% · 出发 ${String(session.departHour).padStart(2, "0")}:00` : `Target ${session.targetSocPct}% · Depart ${String(session.departHour).padStart(2, "0")}:00`)}</strong>
       <div class="charge-plan-rows">
         <span>${zh ? "预计完成" : "Ready by"} <b>${finishTxt}</b></span>
-        <span>${zh ? "本夜成本" : "Tonight"} <b data-plan-cost>${plan.evCostEur < -0.005 ? zh ? "倒赚 " + fmtEur(plan.evCostEur) : "earns " + fmtEur(plan.evCostEur) : fmtEur(plan.evCostEur)}</b></span>
-        <span>${zh ? "无脑充对照" : "Charge-now"} <b>${fmtEur(plan.naiveCostEur)}</b></span>
-        <span>${zh ? "智能调度省" : "LP saves"} <b class="is-save" data-plan-saving>${fmtEur(save)}</b></span>
+        <span>${zh ? "本次补能模拟成本" : "This session (simulated)"} <b data-plan-cost>${plan.evCostEur < -0.005 ? zh ? "倒赚 " + fmtEur(plan.evCostEur) : "earns " + fmtEur(plan.evCostEur) : fmtEur(plan.evCostEur)}</b></span>
+        <span>${zh ? "对照基准 · 立即充" : "Baseline · charge now"} <b>${fmtEur(plan.naiveCostEur)}</b></span>
+        <span>${zh ? "本次模拟相对立即充节省" : "Simulated saving vs charge-now"} <b class="is-save" data-plan-saving>${fmtEur(save)}</b></span>
         <span>${zh ? "补能" : "Energy"} <b>${evKwh.toFixed(1)} kWh ≈ ${rangeKm} km</b></span>
         <span>${zh ? "绿电占比" : "Green share"} <b>${green}%</b></span>
         <span>${zh ? "当前功率" : "Now"} <b>${nowEvKw.toFixed(1)} kW</b></span>
       </div>
-      <div class="charge-plan-note">${zh ? "6 小时演示 · 模拟循环成本 €0.02/kWh · 负价只充不卖" : "6-hour demo · assumed cycling cost €0.02/kWh · no negative-price export"}</div>`;
+      <div class="charge-plan-note">${zh ? "合成数据演示 · 非实测账单 · 循环成本假设 €0.02/kWh · 负价只充不卖" : "Synthetic demo data · not a measured bill · assumed cycling cost €0.02/kWh · no negative-price export"}</div>`;
     if (!motionPreference.matches && !document.hidden) {
       const cost = el.querySelector("[data-plan-cost]");
       const saving = el.querySelector("[data-plan-saving]");

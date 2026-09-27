@@ -14,10 +14,10 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="每度有据 · Anker SOLIX 家庭能源工作室">
   <meta property="og:description" content="实时 3D 家庭能源仿真：LP 滚动优化三站充放电调度，AI 只解释、不控制，每个数字可追溯。">
-  <meta property="og:image" content="/assets/og-cover.jpg">
+  <meta property="og:image" content="https://xinxinxiangrong666666.github.io/solix-home-energy/assets/og-cover.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:url" content="/">
+  <meta property="og:url" content="https://xinxinxiangrong666666.github.io/solix-home-energy/">
   <meta name="twitter:card" content="summary_large_image">
   <script type="importmap">
     {
@@ -27,8 +27,8 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="styles.css?v=20260926-11">
-  <link rel="stylesheet" href="styles-upgrade.css?v=20260926-11">
+  <link rel="stylesheet" href="styles.css?v=20260926-14">
+  <link rel="stylesheet" href="styles-upgrade.css?v=20260926-14">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -42,7 +42,7 @@
 
       <div class="nav-links" id="nav-links">
         <a href="#experience">产品体验</a>
-        <a href="#lab">3D 能源空间</a>
+        <a href="#scene-stage">3D 能源空间</a>
         <a href="#architecture">智能管理</a>
         <a href="#safety">安全保障</a>
         <a href="#support">技术支持</a>
@@ -52,7 +52,7 @@
         <button class="language-toggle" id="language-toggle" type="button" aria-label="Switch to English" title="中 / EN">
           <span class="is-active">中</span><i></i><span>EN</span>
         </button>
-        <a class="nav-cta" href="#lab">探索能源空间</a>
+        <a class="nav-cta" href="#scene-stage">探索能源空间</a>
       </div>
       <button class="nav-toggle" id="nav-toggle" type="button" aria-label="打开菜单" aria-expanded="false" aria-controls="nav-links">
         <span></span><span></span><span></span>
@@ -70,7 +70,7 @@
           <h1 id="hero-title">让每一度电<br>都有依据。</h1>
           <p class="hero__lead" data-zh="根据电价、天气和家庭用电安排储能，优先留足关键负荷备电。每次建议都能看懂原因，也能随时切换策略。" data-en="Plan home storage around tariffs, weather and household demand while keeping energy for essential loads. Understand every suggestion and change strategy whenever you need to.">根据电价、天气和家庭用电安排储能，优先留足关键负荷备电。每次建议都能看懂原因，也能随时切换策略。</p>
           <div class="hero__actions">
-            <a class="button button--primary" href="#lab">进入 3D 家庭</a>
+            <a class="button button--primary" href="#scene-stage">进入 3D 家庭</a>
             <a class="button button--glass" href="#home-scenario" data-zh="看家庭情景" data-en="Explore a home scenario">看家庭情景</a>
           </div>
           <div class="hero__trustbar" aria-label="家庭能源体验">
@@ -185,7 +185,7 @@
       </div>
     </section>
 
-    <section class="lab section section--dark" id="lab">
+    <section class="lab section section--dark lab--tight" id="lab">
       <div class="page-shell">
         <div class="section-heading section-heading--split section-heading--light reveal">
           <div>
@@ -235,7 +235,7 @@
               <button type="button" data-weather="snow" aria-pressed="false"><i class="weather-symbol weather-symbol--snow"></i>降雪</button>
               <button type="button" data-weather="night" aria-pressed="false"><i class="weather-symbol weather-symbol--night"></i>夜间</button>
             </div>
-            <div class="scene-stage" id="scene-stage">
+            <div class="scene-stage" id="scene-stage" tabindex="-1" aria-label="3D home energy scene anchor">
               <div class="scene-loader" id="scene-loader">
                 <span></span><span></span><span></span>
                 <p>正在构建家庭能源空间</p>
@@ -498,9 +498,9 @@
             </div>
             <p class="tri-caveat" data-zh="三个站点均为本地合成情景；真实设备连接与节省金额须以实际计量核验。" data-en="All three sites are local synthetic scenarios. Live device control and savings require measured verification.">三个站点均为本地合成情景；真实设备连接与节省金额须以实际计量核验。</p>
 
-            <!-- ② 约束卡三段式（原话 → 约束名 → 优化器写法） -->
-            <div class="reveal">
-              <h3 class="tri-sub">用户原话 → 约束名 → 演示实现状态</h3>
+            <!-- ② 约束卡三段式（原话 → 约束名 → 优化器写法）— 默认折叠（P2：不打断产品阅读节奏，技术评审点开看） -->
+            <details class="tri-deep-dive reveal">
+              <summary class="tri-sub" data-zh="深入了解：用户原话 → 约束名 → 演示实现状态（技术表）" data-en="Deep dive: user words → constraint names → demo implementation (technical table)">深入了解：用户原话 → 约束名 → 演示实现状态（技术表）</summary>
               <div class="tri-table-scroll"><table class="tri-map">
                 <thead><tr><th>用户原话</th><th>约束名</th><th>演示实现状态</th></tr></thead>
                 <tbody>
@@ -511,7 +511,7 @@
                   <tr><td>“电池别来回折腾”</td><td><code>cycle_cost</code></td><td>演示目标含 €0.02/kWh 循环成本假设，非官方参数</td></tr>
                 </tbody>
               </table></div>
-            </div>
+            </details>
 
             <!-- ③ 6h / 24-slot rolling action plan (the browser solver's actual horizon) -->
             <div class="reveal">
@@ -646,8 +646,9 @@
   <footer class="site-footer">
     <div class="page-shell site-footer__grid">
       <div><strong>ANKER SOLIX</strong><span>HOME ENERGY STUDIO</span></div>
-      <p>家庭能源交互体验页面。所有功率、价格和运行状态均为本地模拟，不连接真实家庭设备。</p>
-      <a href="#home">返回顶部</a>
+      <p data-zh="家庭能源交互体验页面。所有功率、价格和运行状态均为本地模拟，不连接真实家庭设备。本项目为黑客松参赛的独立概念原型，非 Anker 官方网站；3D 模型与贴图来源见" data-en="Interactive home-energy demo. All power, price and status values are locally simulated — no real household devices are connected. This is an independent concept prototype built for a hackathon, not an official Anker website. 3D model and texture credits:">家庭能源交互体验页面。所有功率、价格和运行状态均为本地模拟，不连接真实家庭设备。本项目为黑客松参赛的独立概念原型，非 Anker 官方网站；3D 模型与贴图来源见</p>
+      <a href="ATTRIBUTIONS.md" target="_blank" rel="noopener" data-zh="资产署名 ATTRIBUTIONS" data-en="Asset attributions">资产署名 ATTRIBUTIONS</a>
+      <a href="#home" data-zh="返回顶部" data-en="Back to top">返回顶部</a>
     </div>
   </footer>
 
@@ -701,9 +702,9 @@
   <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
   <script src="energy-lp.js?v=20260925-11"></script>
   <script src="energy-session.js?v=20260925-15"></script>
-  <script src="llm-bridge.js?v=20260926-13"></script>
-  <script src="energy-agent.js?v=20260926-13"></script>
-  <script src="scene-realistic.js?v=20260926-13"></script>
+  <script src="llm-bridge.js?v=20260926-14"></script>
+  <script src="energy-agent.js?v=20260926-14"></script>
+  <script src="scene-realistic.js?v=20260926-14"></script>
   <script src="revenue-ledger.js?v=20260926-01"></script>
   <script>
     // fallback 里的「重试加载 3D」：硬刷新绕过一切缓存
@@ -713,6 +714,6 @@
       }
     });
   </script>
-  <script src="app.js?v=20260926-13"></script>
+  <script src="app.js?v=20260926-14"></script>
 </body>
 </html>

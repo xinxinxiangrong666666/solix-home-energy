@@ -1084,7 +1084,7 @@
     // 充电会话：每跨过 15min 时隙边界重解一次滚动 LP（energy_brain 算法核），暂停时也刷新卡片
     if (window.EnergySession) {
       const __lpPlan = window.EnergySession.solveIfDue(state.simMinute, state.soc, weatherProfiles[state.weather].solar,
-        Math.max(0.1, state.metrics.load - state.metrics.ev), state.metrics.solar, weatherProfiles[state.weather].reserve);
+        Math.max(0.1, state.metrics.load - state.metrics.ev), state.metrics.solar, weatherProfiles[state.weather].reserve, state.weather);
       /* LP 每次重解后重画三站时间线（修复首画时 plan 未生成的空图） */
       if (__lpPlan && window.TriSite) window.TriSite.update(state.simMinute, state.soc);
     }
@@ -1584,21 +1584,41 @@
     initWeatherControls();
     initSimulationControls();
     if (window.RealisticHomeScene) {
-      window.RealisticHomeScene.init({
-        devices: state.devices,
-        flows: state.threeFlows,
-        soc: state.soc,
-        weather: state.weather,
-        language: state.lang,
-        onSelectDevice: (id) => {
-          state.selectedDeviceId = id;
-          renderDevices();
-        }
-      });
-      /* 场景就绪后立即同步当前模拟时刻（开场即正确时间的光照） */
-      const syncClock = () => { window.RealisticHomeScene.setTimeOfDay?.(state.simMinute); };
-      setTimeout(syncClock, 800);
-      setTimeout(syncClock, 3000);
+      /* P2-d（2026-09-27 体检）：3D 资源（HDR 1.4MB + 模型）延迟到接近视口/浏览器空闲再初始化，
+       * 让首屏文案、图表、Agent 先拿到带宽；3D 区到达视口或 2.5s 兜底即启动，竞赛演示不受影响。 */
+      const labEl = document.getElementById("lab");
+      let sceneStarted = false;
+      const startScene = () => {
+        if (sceneStarted) return;
+        sceneStarted = true;
+        window.RealisticHomeScene.init({
+          devices: state.devices,
+          flows: state.threeFlows,
+          soc: state.soc,
+          weather: state.weather,
+          language: state.lang,
+          onSelectDevice: (id) => {
+            state.selectedDeviceId = id;
+            renderDevices();
+          }
+        });
+        /* 场景就绪后立即同步当前模拟时刻（开场即正确时间的光照） */
+        const syncClock = () => { window.RealisticHomeScene.setTimeOfDay?.(state.simMinute); };
+        setTimeout(syncClock, 800);
+        setTimeout(syncClock, 3000);
+      };
+      if (labEl && "IntersectionObserver" in window) {
+        const labObserver = new IntersectionObserver((entries) => {
+          if (entries.some((e) => e.isIntersecting)) {
+            labObserver.disconnect();
+            startScene();
+          }
+        }, { rootMargin: "400px 0px" }); /* 提前 400px 预启动，滚到前已就绪 */
+        labObserver.observe(labEl);
+        setTimeout(startScene, 2500); /* 兜底：2.5s 后无论滚没滚都启动 */
+      } else {
+        startScene();
+      }
     } else {
       init3D();
     }

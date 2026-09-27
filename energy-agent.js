@@ -71,11 +71,15 @@
       const button = document.createElement("button");
       button.type = "button";
       const action = record.plannedAction;
+      const guarded = record.weather === "storm" || record.weather === "snow";
       const state = !action ? say("求解失败", "Solve failed")
         : action.chargeKw > 0.025 ? say(`充 ${fmt(action.chargeKw)} kW`, `Charge ${fmt(action.chargeKw)} kW`)
         : action.dischargeKw > 0.025 ? say(`放 ${fmt(action.dischargeKw)} kW`, `Discharge ${fmt(action.dischargeKw)} kW`)
         : say("待机", "Hold");
-      button.textContent = `${record.id} · ${record.clock} · ${state}`;
+      /* 天气守护标注（2026-09-27）：雷暴/降雪时 LP 计划被守护逻辑覆盖，展示"参考计划"防误导 */
+      button.textContent = guarded
+        ? `${record.id} · ${record.clock} · ${say("参考计划(未执行) ", "Reference only (not applied) ")}${state}`
+        : `${record.id} · ${record.clock} · ${state}`;
       button.addEventListener("click", () => showEvidence(record.id));
       item.appendChild(button);
       list.appendChild(item);

@@ -4371,3 +4371,32 @@ body::before {
   }
   .section-heading--split > p { max-width: 100%; }
 }
+
+/* P0-5（2026-09-27 体检）：点击“3D 能源空间”后首屏应尽快见 3D。
+ * 缩短 lab 区顶部留白（9vw→3vw 档），并把锚点滚动定位上提避开吸顶导航。 */
+.lab--tight {
+  padding-top: clamp(36px, 3vw, 56px);
+  scroll-margin-top: 64px;
+}
+/* P0-5 最终方案：锚点直指 3D 画布 #scene-stage——落地即见场景 */
+#scene-stage { scroll-margin-top: 64px; }
+.lab--tight .section-heading {
+  margin-bottom: clamp(18px, 2.4vw, 30px);
+}
+
+/* P2（2026-09-27 体检）：技术约束表默认折叠；summary 复用 tri-sub 视觉 */
+.tri-deep-dive summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+.tri-deep-dive summary::-webkit-details-marker { display: none; }
+.tri-deep-dive summary::after { content: "+"; font-size: 18px; color: rgba(233,242,248,.6); }
+.tri-deep-dive[open] summary::after { content: "–"; }
+.tri-deep-dive summary:hover { color: var(--white); }
+.tri-deep-dive .tri-table-scroll { margin-top: 12px; }
+
+/* P0-5 增强：压缩 lab 头部，让"进入 3D 家庭"落地后画布尽早进入首屏 */
+.lab--tight .section-heading h2 {
+  font-size: clamp(28px, 3.6vw, 44px);
+  line-height: 1.15;
+}
+.lab--tight .lab-status-line { margin-top: 14px; }
+.lab--tight .scene-card__head { padding-top: 18px; padding-bottom: 12px; }
+.lab--tight .scene-stage { min-height: min(70vh, 640px); }
