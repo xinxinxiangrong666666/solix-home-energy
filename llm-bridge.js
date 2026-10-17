@@ -28,8 +28,8 @@
      * 用户关一次即写入 "off"，之后永远尊重用户选择。 */
     try {
       const stored = localStorage.getItem(SWITCH_KEY);
-      return stored === null ? true : stored === "on";
-    } catch (_) { return true; }
+      return stored === "on";
+    } catch (_) { return false; }
   }
 
   function persist(on) {

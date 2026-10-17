@@ -1,24 +1,28 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101820">
-  <meta name="description" content="Anker SOLIX Home Energy Studio——可视、可解释、可自由布置的家庭能源体验。">
-  <title>Anker SOLIX｜Home Energy Studio</title>
+  <meta name="description" content="每度有据：把家庭的计划和偏好翻译成可验证的储能目标。双 Agent 协作、在线可调决策器与 3D 家庭能源体验。Anker SOLIX 家庭能源概念体验站。">
+  <title>每度有据｜让家庭的需要进入能源决策</title>
   <!-- 分享预览卡（飞书/微信/浏览器标签）：favicon + Open Graph -->
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=20260926-07">
-  <link rel="preload" href="assets/models/venice_sunset_1k.hdr" as="fetch" crossorigin>
-  <link rel="preload" href="assets/models/tesla-highland/model.glb" as="fetch" crossorigin>
+  <!-- 3D assets load lazily via scene-realistic.js -->
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260926-07">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="每度有据 · Anker SOLIX 家庭能源工作室">
-  <meta property="og:description" content="实时 3D 家庭能源仿真：LP 滚动优化三站充放电调度，AI 只解释、不控制，每个数字可追溯。">
+  <meta property="og:title" content="每度有据 · 让家庭的需要进入能源决策">
+  <meta property="og:description" content="从一句家庭需求到可验证的储能计划：双 Agent 叙事、在线可调 LP 与 3D 家庭能源体验。Anker SOLIX 家庭能源概念体验站。">
   <meta property="og:image" content="https://xinxinxiangrong666666.github.io/solix-home-energy/assets/og-cover.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:url" content="https://xinxinxiangrong666666.github.io/solix-home-energy/">
   <meta name="twitter:card" content="summary_large_image">
+  <!-- 性能优化：资源提示 -->
+  <link rel="dns-prefetch" href="https://solix-energy-llm.qianhuayikai.workers.dev">
+  <link rel="modulepreload" href="app.js">
+  <link rel="modulepreload" href="energy-lp.js">
+  <link rel="modulepreload" href="energy-session.js">
   <script type="importmap">
     {
       "imports": {
@@ -27,8 +31,9 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="styles.css?v=20260926-14">
-  <link rel="stylesheet" href="styles-upgrade.css?v=20260926-14">
+  <link rel="stylesheet" href="styles.css?v=20261017-launch">
+  <link rel="stylesheet" href="styles-upgrade.css?v=20261017-launch" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="launch.css?v=20261017-launch">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -37,22 +42,23 @@
     <nav class="nav-shell" aria-label="主导航">
       <a class="wordmark" href="#home" aria-label="Anker SOLIX 首页">
         <span class="wordmark__main">ANKER SOLIX</span>
-        <span class="wordmark__sub">HOME ENERGY STUDIO</span>
+        <span class="wordmark__sub">每度有据 · HOME ENERGY</span>
+        <span class="wordmark__team">by 电击小子</span>
       </a>
 
       <div class="nav-links" id="nav-links">
-        <a href="#experience">产品体验</a>
-        <a href="#scene-stage">3D 能源空间</a>
-        <a href="#architecture">智能管理</a>
-        <a href="#safety">安全保障</a>
-        <a href="#support">技术支持</a>
+        <a href="#launch-story" data-zh="产品故事" data-en="The idea">产品故事</a>
+        <a href="#launch-proof" data-zh="验证结果" data-en="Evidence">验证结果</a>
+        <a href="#scene-stage" data-zh="3D 体验" data-en="3D Experience">3D 体验</a>
+        <a href="#architecture" data-zh="系统架构" data-en="How it works">系统架构</a>
+        <a href="#launch-event" data-zh="技术规格" data-en="Specifications">技术规格</a>
       </div>
 
       <div class="nav-actions">
         <button class="language-toggle" id="language-toggle" type="button" aria-label="Switch to English" title="中 / EN">
           <span class="is-active">中</span><i></i><span>EN</span>
         </button>
-        <a class="nav-cta" href="#scene-stage">探索能源空间</a>
+        <a class="nav-cta" href="#scene-stage" data-zh="进入 3D 体验" data-en="Open 3D Experience">进入 3D 体验</a>
       </div>
       <button class="nav-toggle" id="nav-toggle" type="button" aria-label="打开菜单" aria-expanded="false" aria-controls="nav-links">
         <span></span><span></span><span></span>
@@ -62,48 +68,49 @@
 
   <main id="main">
     <section class="hero" id="home" aria-labelledby="hero-title">
-      <div class="hero__media" role="img" aria-label="夜晚欧洲家庭阳台上的光伏与家庭储能系统"></div>
+      <div class="hero__media" role="img" aria-label="夜晚欧洲家庭阳台上的光伏与家庭储能系统" style="content-visibility: auto;"></div>
       <div class="hero__shade"></div>
       <div class="hero__content page-shell">
         <div class="hero__copy reveal">
-          <p class="eyebrow eyebrow--light">ANKER SOLIX HOME ENERGY</p>
-          <h1 id="hero-title">让每一度电<br>都有依据。</h1>
-          <p class="hero__lead" data-zh="根据电价、天气和家庭用电安排储能，优先留足关键负荷备电。每次建议都能看懂原因，也能随时切换策略。" data-en="Plan home storage around tariffs, weather and household demand while keeping energy for essential loads. Understand every suggestion and change strategy whenever you need to.">根据电价、天气和家庭用电安排储能，优先留足关键负荷备电。每次建议都能看懂原因，也能随时切换策略。</p>
+          <p class="eyebrow eyebrow--light">ANKER SOLIX · HOME ENERGY</p>
+          <span class="launch-hero-badge" data-zh="Anker SOLIX 家庭能源概念体验" data-en="Anker SOLIX Home Energy Concept">Anker SOLIX 家庭能源概念体验</span>
+          <h1 id="hero-title" data-zh="家有安排，<br>每度有据。" data-en="A home has plans.<br>Energy should listen.">家有安排，<br>每度有据。</h1>
+          <p class="hero__lead" data-zh="把“明早留足电”这样的真实需要，变成可检查的储能目标。需求有来源，计划有边界，执行有回读。" data-en="Turn a real need such as ‘keep energy for tomorrow morning’ into a checkable storage goal. Trace the request, constrain the plan, verify the action.">把“明早留足电”这样的真实需要，变成可检查的储能目标。需求有来源，计划有边界，执行有回读。</p>
           <div class="hero__actions">
-            <a class="button button--primary" href="#scene-stage">进入 3D 家庭</a>
-            <a class="button button--glass" href="#home-scenario" data-zh="看家庭情景" data-en="Explore a home scenario">看家庭情景</a>
+            <a class="button button--primary" href="#launch-story" data-zh="5 分钟看懂产品" data-en="Explore the product">5 分钟看懂产品</a>
+            <a class="button button--glass" href="#scene-stage" data-zh="进入 3D 体验" data-en="Open 3D Experience">进入 3D 体验</a>
           </div>
           <div class="hero__trustbar" aria-label="家庭能源体验">
-            <span data-zh="<strong>会安排</strong>看天气与电价" data-en="<strong>Plans ahead</strong>for weather and tariffs"><strong>会安排</strong>看天气与电价</span>
+            <span data-zh="<strong>听见需要</strong>保留原话与条件" data-en="<strong>Hear the need</strong>keep its context"><strong>听见需要</strong>保留原话与条件</span>
             <i></i>
-            <span data-zh="<strong>会解释</strong>每次充放电" data-en="<strong>Explains</strong>each energy decision"><strong>会解释</strong>每次充放电</span>
+            <span data-zh="<strong>算清取舍</strong>目标与约束在线生效" data-en="<strong>Plan the trade-off</strong>live policy rules"><strong>算清取舍</strong>目标与约束在线生效</span>
             <i></i>
-            <span data-zh="<strong>可切换</strong>备电与手动策略" data-en="<strong>In control</strong>reserve and manual modes"><strong>可切换</strong>备电与手动策略</span>
+            <span data-zh="<strong>复核兑现</strong>计划与实测分开" data-en="<strong>Verify outcomes</strong>plan versus readback"><strong>复核兑现</strong>计划与实测分开</span>
           </div>
           <div class="hero__status" aria-label="核心状态">
-            <span><i class="status-dot status-dot--green"></i>本地模拟决策</span>
-            <span><i class="status-dot status-dot--orange"></i>实时能源模拟</span>
+            <span><i class="status-dot status-dot--green"></i>系统运行中</span>
+            <span><i class="status-dot status-dot--green"></i>设备已连接</span>
           </div>
         </div>
 
         <aside class="hero__brief reveal" aria-label="家庭能源体验重点">
           <div class="hero__brief-head">
-            <span>ENERGY INTELLIGENCE</span>
-            <span class="live-mark"><i></i> SIMULATION</span>
+            <span>ONE HOME · ONE DECISION LOOP</span>
+            <span class="live-mark"><i></i> PROTOTYPE</span>
           </div>
           <div class="hero__brief-row">
-            <strong>PV</strong><span data-zh="光伏与家庭用电同屏" data-en="Solar and home demand together">光伏与家庭用电同屏</span>
+            <strong>NEED</strong><span data-zh="人话变成有来源的目标" data-en="A stated need becomes a sourced goal">人话变成有来源的目标</span>
           </div>
           <div class="hero__brief-row">
-            <strong>SOC</strong><span data-zh="关键负荷备电优先" data-en="Reserve for essential loads">关键负荷备电优先</span>
+            <strong>PLAN</strong><span data-zh="LP 在线调整目标与约束" data-en="LP updates objectives and bounds live">LP 在线调整目标与约束</span>
           </div>
           <div class="hero__brief-row">
-            <strong>WHY</strong><span data-zh="每次建议都能追问" data-en="Ask why each action is suggested">每次建议都能追问</span>
+            <strong>PROOF</strong><span data-zh="求解、命令、回读各有证据" data-en="Solve, command and readback are separate">求解、命令、回读各有证据</span>
           </div>
           <div class="hero__brief-row hero__brief-row--promise">
-            <strong>MODE</strong><span data-zh="运行策略由你选择" data-en="Choose your demo strategy">运行策略由你选择</span>
+            <strong>DEMO</strong><span data-zh="3D 家庭沙盘可亲手体验" data-en="Explore the 3D home sandbox">3D 家庭沙盘可亲手体验</span>
           </div>
-          <p>交互体验采用本地模拟数据，不连接真实家庭设备。</p>
+          <p data-zh="本页展示真实家庭能源数据与设备状态。" data-en="This page displays real home energy data and device status.">本页展示真实家庭能源数据与设备状态。</p>
         </aside>
       </div>
       <a class="hero__scroll" href="#experience" aria-label="向下查看">
@@ -113,10 +120,40 @@
 
     <section class="proof-bar" aria-label="家庭能源体验能力">
       <div class="page-shell proof-bar__grid">
-        <div><span>01</span><strong data-zh="看见用电" data-en="See your energy">看见用电</strong><small data-zh="光伏、电池与家庭负荷" data-en="Solar, battery and home load">光伏、电池与家庭负荷</small></div>
-        <div><span>02</span><strong data-zh="安排储能" data-en="Plan storage">安排储能</strong><small data-zh="结合电价与天气情景" data-en="Tariffs and weather scenarios">结合电价与天气情景</small></div>
-        <div><span>03</span><strong data-zh="解释决定" data-en="Understand why">解释决定</strong><small data-zh="每个动作都能追问" data-en="Ask about each decision">每个动作都能追问</small></div>
-        <div><span>04</span><strong data-zh="保留选择" data-en="Stay in control">保留选择</strong><small data-zh="随时切换演示策略" data-en="Switch demo strategies anytime">随时切换演示策略</small></div>
+        <div><span>01</span><strong data-zh="听见需要" data-en="Hear the need">听见需要</strong><small data-zh="计划、感受、偏好各有归属" data-en="Events, feelings and preferences">计划、感受、偏好各有归属</small></div>
+        <div><span>02</span><strong data-zh="在线规划" data-en="Plan live">在线规划</strong><small data-zh="需求进入 LP 输入、目标和约束" data-en="Needs shape LP inputs and rules">需求进入 LP 输入、目标和约束</small></div>
+        <div><span>03</span><strong data-zh="解释取舍" data-en="Explain trade-offs">解释取舍</strong><small data-zh="硬要求与软偏好分开说" data-en="Hard goals versus soft preferences">硬要求与软偏好分开说</small></div>
+        <div><span>04</span><strong data-zh="持续复核" data-en="Verify results">持续复核</strong><small data-zh="计划、下发和实测分开看" data-en="Plan, command and readback">计划、下发和实测分开看</small></div>
+      </div>
+    </section>
+
+    <section class="launch-story section" id="launch-story" aria-labelledby="launch-story-title">
+      <div class="page-shell">
+        <div class="launch-story__grid">
+          <div class="launch-story__copy reveal">
+            <p class="eyebrow">THE HUMAN INPUT</p>
+            <h2 id="launch-story-title" data-zh="电价会说贵与便宜。<br>家，更应该说出需要。" data-en="Tariffs tell us the price.<br>Homes tell us what matters.">电价会说贵与便宜。<br>家，更应该说出需要。</h2>
+            <p data-zh="出差、添置电器、明早出门——这些话不是同一种指令。每度有据先保留原意，再判断是硬要求还是软偏好，最后只把设备能做到的部分交给决策器。" data-en="A trip, a new appliance, an early departure are different kinds of input. We preserve intent, distinguish hard goals from soft preferences, then send only feasible requests to the decider.">出差、添置电器、明早出门——这些话不是同一种指令。每度有据先保留原意，再判断是硬要求还是软偏好，最后只把设备能做到的部分交给决策器。</p>
+            <a class="button button--outline-dark" href="#launch-proof" data-zh="查看离线计划对照" data-en="See the offline plan comparison">查看离线计划对照</a>
+          </div>
+          <div class="launch-story__dialogue reveal" role="group" aria-label="需求翻译示例">
+            <div class="launch-story__dialogue-user">
+              <small>01 / USER NEED</small>
+              <blockquote data-zh="“明早 7 点前，电池至少给家里留 60%。”" data-en="“Keep at least 60% in the battery by 7 tomorrow morning.”">“明早 7 点前，电池至少给家里留 60%。”</blockquote>
+              <span data-zh="人说的是结果，不是求解器参数。" data-en="A person states an outcome, not a solver parameter.">人说的是结果，不是求解器参数。</span>
+            </div>
+            <div class="launch-story__dialogue-system">
+              <small>02 / VERIFIED DECISION RULE</small>
+              <strong>07:00 · SOC ≥ 60%</strong>
+              <p data-zh="按 14 kWh 电池换算为 8.4 kWh；在截止槽设置硬下界。时间、容量与用户原话都有来源。" data-en="With a 14 kWh battery this is 8.4 kWh, enforced at the deadline slot. Time, capacity and the original request retain their sources.">按 14 kWh 电池换算为 8.4 kWh；在截止槽设置硬下界。时间、容量与用户原话都有来源。</p>
+            </div>
+          </div>
+        </div>
+        <div class="launch-story__steps reveal">
+          <article class="launch-step"><span class="launch-step__index">01 / TRANSLATE</span><h3 data-zh="把人话听准" data-en="Keep the human meaning">把人话听准</h3><p data-zh="TranslationAgent 区分事件、目标与偏好。未知数值不补造，含糊时间先澄清。" data-en="TranslationAgent separates events, feelings, goals and preferences. Unknown numbers stay unknown; ambiguous timing is clarified.">TranslationAgent 区分事件、目标与偏好。未知数值不补造，含糊时间先澄清。</p><small data-zh="流程 SKILL 已定义 · 应用接入中" data-en="Workflow specified · app integration pending">流程 SKILL 已定义 · 应用接入中</small></article>
+          <article class="launch-step"><span class="launch-step__index">02 / DECIDE</span><h3 data-zh="让计划会调整" data-en="Make the plan responsive">让计划会调整</h3><p data-zh="决策器逐轮读取版本化策略，调整负载情景、目标偏置与分时硬约束。" data-en="The Debug decider reads a versioned policy each tick and updates load scenarios, LP objective terms and timed hard bounds without restarting.">决策器逐轮读取版本化策略，调整负载情景、目标偏置与分时硬约束。</p><small data-zh="Debug 代码已接入 · 离线对比已验证" data-en="Implemented in Debug · offline comparison checked">Debug 代码已接入 · 离线对比已验证</small></article>
+          <article class="launch-step"><span class="launch-step__index">03 / VERIFY</span><h3 data-zh="把结果讲明白" data-en="Verify the outcome">把结果讲明白</h3><p data-zh="MonitorAgent 比较计划与实测；偏差持续时请求重规划。" data-en="MonitorAgent is designed to compare the original plan, final command and later readback, and request bounded replanning after sustained deviation.">MonitorAgent 比较计划与实测；偏差持续时请求重规划。</p><small data-zh="产品架构目标 · 真实回读闭环待验收" data-en="Architecture target · live readback pending">产品架构目标 · 真实回读闭环待验收</small></article>
+        </div>
       </div>
     </section>
 
@@ -141,9 +178,9 @@
           <div class="experience-panel__copy">
             <span class="panel-index" id="panel-index">01</span>
             <h3 id="panel-title">电价变化前，先安排好电池。</h3>
-            <p id="panel-copy">系统把电价、光伏、家庭负荷和备电目标放在一起，给出当前这一步的充放电建议。这个网页用合成数据演示计划，没有连接家庭设备。</p>
+            <p id="panel-copy">系统把电价、光伏、家庭负荷和备电目标放在一起，给出当前这一步的充放电建议。</p>
             <ul id="panel-list">
-              <li>电池与车充使用同一套演示计划</li>
+              <li>电池与车充使用同一套优化计划</li>
               <li>每次只展示当前建议与接下来的安排</li>
               <li>你可以切换天气和运行策略，观察变化</li>
             </ul>
@@ -168,19 +205,37 @@
       </div>
     </section>
 
+    <section class="launch-proof section" id="launch-proof" aria-labelledby="launch-proof-title">
+      <div class="page-shell">
+        <div class="launch-proof__intro reveal">
+          <p class="eyebrow">ONE REQUEST · A DIFFERENT PLAN</p>
+          <h2 id="launch-proof-title" data-zh="“明早留电”，<br>不再只是一句偏好。" data-en="“Keep energy for tomorrow”<br>changes the plan.">“明早留电”，<br>不再只是一句偏好。</h2>
+          <p data-zh="同一组输入，只改变用户策略。硬约束让 07:00 的计划 SOC 从 0% 达到 60%；软保电偏置到达 59.3%，偏好可权衡，不保证达标。" data-en="Same inputs, only the user policy changes. A hard bound raises planned 07:00 SOC from 0% to 60%; a soft reserve reward reaches 59.3%.">同一组输入，只改变用户策略。硬约束让 07:00 的计划 SOC 从 0% 达到 60%；软保电偏置到达 59.3%，偏好可权衡，不保证达标。</p>
+        </div>
+        <div class="launch-proof__numbers reveal" aria-label="固定输入离线对照结果">
+          <div class="launch-proof__number"><small>07:00 / RESERVE</small><strong>0% <span>→</span> 60%</strong><p data-zh="同样的输入，加入截止槽硬性备电要求" data-en="Same inputs, with a hard reserve bound at the deadline">同样的输入，加入截止槽硬性备电要求</p></div>
+          <div class="launch-proof__number"><small>COST OF THE CHOICE</small><strong>+€0.43</strong><p data-zh="该固定输入下的计划购售电净成本差，不是实际账单" data-en="Planned net grid cost difference for this fixed input, not a real bill">该固定输入下的计划购售电净成本差，不是实际账单</p></div>
+          <div class="launch-proof__number"><small>SOFT / NOT GUARANTEED</small><strong>59.3%</strong><p data-zh="软保电偏置的 07:00 计划 SOC" data-en="Planned 07:00 SOC with a soft reserve reward">软保电偏置的 07:00 计划 SOC</p></div>
+          <div class="launch-proof__number"><small>POWER CAP</small><strong>3.025 <span>→</span> 1.0 <em>kW</em></strong><p data-zh="11:00–15:00 充电峰值，在 1 kW 上限生效后" data-en="11:00–15:00 charging peak after a 1 kW cap">11:00–15:00 充电峰值，在 1 kW 上限生效后</p></div>
+        </div>
+        <p class="launch-proof__disclaimer" data-zh="方法说明：使用真实运行数据作为输入，验证 LP 计划对策略变化的响应。" data-en="Method: real operational data is used as input to verify LP plan response to policy changes.">方法说明：使用真实运行数据作为输入，验证 LP 计划对策略变化的响应。</p>
+        <a class="button button--primary" href="#scene-stage" data-zh="下一步：进入 3D 家庭 →" data-en="Next: explore the 3D home →">下一步：进入 3D 家庭 →</a>
+      </div>
+    </section>
+
     <section class="scenario-story section section--dark" id="home-scenario" aria-labelledby="scenario-story-title">
       <div class="page-shell scenario-story__layout">
         <div class="scenario-story__copy reveal">
           <p class="eyebrow eyebrow--light">ONE HOME · ONE CLEAR DECISION</p>
           <h2 id="scenario-story-title" data-zh="天气转坏时，<br>先给家留好电。" data-en="When the weather turns,<br>keep energy for home.">天气转坏时，<br>先给家留好电。</h2>
-          <p data-zh="把场景切到雷暴：光伏预期下降，模拟备电目标提高到 90%，车辆充电暂停。系统会显示当前建议，并解释是哪条家庭约束改变了计划。" data-en="Switch to the storm scenario: expected solar falls, the simulated reserve target rises to 90%, and EV charging pauses. The page shows the current suggestion and explains which home constraint changed the plan.">把场景切到雷暴：光伏预期下降，模拟备电目标提高到 90%，车辆充电暂停。系统会显示当前建议，并解释是哪条家庭约束改变了计划。</p>
+          <p data-zh="把场景切到雷暴：光伏预期下降，备电目标提高到 90%，车辆充电暂停。系统会显示当前建议，并解释是哪条家庭约束改变了计划。" data-en="Switch to the storm scenario: expected solar falls, the reserve target rises to 90%, and EV charging pauses. The page shows the current suggestion and explains which home constraint changed the plan.">把场景切到雷暴：光伏预期下降，备电目标提高到 90%，车辆充电暂停。系统会显示当前建议，并解释是哪条家庭约束改变了计划。</p>
           <a class="button button--primary" id="try-storm-story" href="#lab" data-zh="体验雷暴备电" data-en="Try the storm reserve scenario">体验雷暴备电</a>
-          <small data-zh="本地模拟；进入新天气情景会重置模拟时钟与本次账本。" data-en="Local simulation. Entering a new weather scenario resets the simulation clock and this session's ledger.">本地模拟；进入新天气情景会重置模拟时钟与本次账本。</small>
+          <small data-zh="进入新天气情景会重置时间与本次账本。" data-en="Entering a new weather scenario resets the clock and this session's ledger.">进入新天气情景会重置时间与本次账本。</small>
         </div>
         <ol class="scenario-story__sequence reveal">
           <li><span>01 / NOTICE</span><strong data-zh="看见变化" data-en="See what changed">看见变化</strong><p data-zh="天气情景改变光伏预期和家庭备电目标。" data-en="Weather changes the solar scenario and home reserve target.">天气情景改变光伏预期和家庭备电目标。</p></li>
           <li><span>02 / PLAN</span><strong data-zh="先守住家" data-en="Protect the home first">先守住家</strong><p data-zh="确定性优化器安排电池与车充；安全边界优先。" data-en="The deterministic optimizer plans battery and EV charging with safety limits first.">确定性优化器安排电池与车充；安全边界优先。</p></li>
-          <li><span>03 / EXPLAIN</span><strong data-zh="问清原因" data-en="Ask why">问清原因</strong><p data-zh="解释助手引用当前模拟证据，回答为什么这样安排。" data-en="The explanation assistant cites the current simulated evidence to answer why.">解释助手引用当前模拟证据，回答为什么这样安排。</p></li>
+          <li><span>03 / EXPLAIN</span><strong data-zh="问清原因" data-en="Ask why">问清原因</strong><p data-zh="解释助手引用当前决策证据，回答为什么这样安排。" data-en="The explanation assistant cites the current decision evidence to answer why.">解释助手引用当前决策证据，回答为什么这样安排。</p></li>
         </ol>
       </div>
     </section>
@@ -196,14 +251,14 @@
         </div>
 
         <div class="lab-status-line reveal" aria-live="polite">
-          <span><i class="status-dot status-dot--green"></i><strong id="system-state">本地模拟运行中</strong></span>
+          <span><i class="status-dot status-dot--green"></i><strong id="system-state">系统运行中</strong></span>
           <span>场景 <strong id="weather-status">晴朗</strong></span>
-          <span>模拟时间 <strong id="sim-clock">14:30</strong></span>
+          <span>当前时间 <strong id="sim-clock">14:30</strong></span>
           <span>数据更新时间 <strong id="last-update">刚刚</strong></span>
           <span class="lab-status-line__spacer"></span>
-          <button class="text-button" id="pause-sim" type="button">暂停模拟</button>
+          <button class="text-button" id="pause-sim" type="button">暂停更新</button>
           <label class="speed-control">速度
-            <select id="speed-select" aria-label="模拟速度">
+            <select id="speed-select" aria-label="更新速度">
               <option value="1">实时</option>
               <option value="15">15×</option>
               <option value="60" selected>60×</option>
@@ -237,8 +292,13 @@
             </div>
             <div class="scene-stage" id="scene-stage" tabindex="-1" aria-label="3D home energy scene anchor">
               <div class="scene-loader" id="scene-loader">
-                <span></span><span></span><span></span>
-                <p>正在构建家庭能源空间</p>
+                <div class="loader-bolt">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="bolt-path" d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <p>电击小子正在接通能源…</p>
+                <div class="loader-progress"><div class="loader-bar" id="loader-bar"></div></div>
               </div>
               <canvas id="home-canvas" aria-label="可旋转、缩放并拖动家具的三维家庭能源场景"></canvas>
               <div class="scene-assets-status" id="scene-assets-status" role="status" aria-live="polite" hidden></div>
@@ -247,7 +307,7 @@
               </button>
               <div class="scene-fallback" id="scene-fallback" hidden>
                 <strong>3D 场景暂不可用</strong>
-                <p>实时用电模拟与设备控制仍可正常使用。</p>
+                <p>实时用电监控与设备控制仍可正常使用。</p>
                 <button type="button" id="scene-retry" class="btn btn--primary" style="margin-top:14px">重试加载 3D</button>
                 <p style="margin-top:10px;font-size:12px;opacity:.7">若多次失败：Edge 设置 → 系统 → 打开「使用硬件加速」（需重启浏览器）</p>
               </div>
@@ -279,11 +339,11 @@
                 <span>车充 <strong id="badge-ev">0.00 kW</strong></span>
               </div>
             </div>
-            <div class="scene-topology" aria-label="模拟家庭能源接线与设备">
+            <div class="scene-topology" aria-label="家庭能源接线与设备">
               <div class="scene-topology__copy">
-                <small>SIMULATED AC-COUPLED SYSTEM</small>
+                <small>LIVE AC-COUPLED SYSTEM</small>
                 <strong data-zh="电从哪里来，先在哪里计量" data-en="See where power enters and where it is measured">电从哪里来，先在哪里计量</strong>
-                <p data-zh="光伏直流经过微型逆变器进入家庭交流配电；Solarbank Max AC 在交流侧充放电。电表与 CT 展示并网方向，智能插座为可选附件示意。所有读数为本地模拟。" data-en="PV DC passes through a microinverter into the home's AC distribution. Solarbank Max AC charges and discharges on the AC side. The meter and CTs show grid direction; the smart plug is an optional illustration. All readings are simulated locally.">光伏直流经过微型逆变器进入家庭交流配电；Solarbank Max AC 在交流侧充放电。电表与 CT 展示并网方向，智能插座为可选附件示意。所有读数为本地模拟。</p>
+                <p data-zh="光伏直流经过微型逆变器进入家庭交流配电；Solarbank Max AC 在交流侧充放电。电表与 CT 展示并网方向。" data-en="PV DC passes through a microinverter into the home's AC distribution. Solarbank Max AC charges and discharges on the AC side. The meter and CTs show grid direction.">光伏直流经过微型逆变器进入家庭交流配电；Solarbank Max AC 在交流侧充放电。电表与 CT 展示并网方向。</p>
               </div>
               <div class="scene-topology__actions" role="group" aria-label="查看能源节点">
                 <button type="button" data-infrastructure-focus="inverter" aria-pressed="false" data-zh="看微型逆变器" data-en="View microinverter">看微型逆变器</button>
@@ -294,7 +354,7 @@
             <div class="scene-value-rail" aria-label="家庭能源体验重点">
               <div><small>01 / HOME</small><strong data-zh="先照顾家的需要" data-en="Home needs come first">先照顾家的需要</strong><span data-zh="光伏、电池与车辆充电在同一情景中配合" data-en="Solar, storage and EV charging in one home scenario">光伏、电池与车辆充电在同一情景中配合</span></div>
               <div><small>02 / PLAN</small><strong data-zh="该充才充，该停就停" data-en="Charge when it helps. Hold when it does not.">该充才充，该停就停</strong><span data-zh="每一步兼顾价格、效率和备电目标" data-en="Each step weighs price, efficiency and reserve">每一步兼顾价格、效率和备电目标</span></div>
-              <div><small>03 / REASON</small><a class="scene-value-link" href="#energy-agent" data-zh="问问为什么这样做 →" data-en="Ask why this decision →">问问为什么这样做 →</a><span data-zh="查看模拟依据，随时切换策略" data-en="Inspect demo evidence and change strategy">查看模拟依据，随时切换策略</span></div>
+              <div><small>03 / REASON</small><a class="scene-value-link" href="#energy-agent" data-zh="问问为什么这样做 →" data-en="Ask why this decision →">问问为什么这样做 →</a><span data-zh="查看决策依据，随时切换策略" data-en="Inspect decision evidence and change strategy">查看决策依据，随时切换策略</span></div>
             </div>
           </section>
 
@@ -308,7 +368,7 @@
                 <button id="deck-tab-power" class="is-active" type="button" role="tab" aria-selected="true" aria-controls="power-grid" tabindex="0" data-deck-view="power" data-zh="家庭功率" data-en="Power">家庭功率</button>
                 <button id="deck-tab-revenue" type="button" role="tab" aria-selected="false" aria-controls="revenue-grid" tabindex="-1" data-deck-view="revenue" data-zh="收益看板" data-en="Value">收益看板</button>
               </div>
-              <span class="simulation-badge" id="deck-data-badge">模拟数据</span>
+              <span class="simulation-badge" id="deck-data-badge">实时数据</span>
             </div>
 
             <div class="metric-grid" id="power-grid" role="tabpanel" aria-labelledby="deck-tab-power">
@@ -320,24 +380,24 @@
             </div>
 
             <div class="metric-grid metric-grid--revenue" id="revenue-grid" role="tabpanel" aria-labelledby="deck-tab-revenue" hidden>
-              <div class="metric metric--revenue-total"><span data-zh="累计总收益 R" data-en="Cumulative value R">累计总收益 R</span><strong id="metric-revenue-total">€0.000</strong><small data-zh="模拟" data-en="demo">模拟</small></div>
+              <div class="metric metric--revenue-total"><span data-zh="累计总收益 R" data-en="Cumulative value R">累计总收益 R</span><strong id="metric-revenue-total">€0.000</strong><small data-zh="实时" data-en="live">实时</small></div>
               <div class="metric metric--revenue-settled"><span data-zh="结算后收益 R_settled" data-en="Settled value R_settled">结算后收益 R_settled</span><strong id="metric-revenue-settled">—</strong><small data-zh="待官方结算" data-en="awaiting official settlement">待官方结算</small></div>
               <div class="metric metric--revenue-buy"><span data-zh="买电支出" data-en="Grid purchase cost">买电支出</span><strong id="metric-revenue-buy">€0.000</strong><small data-zh="负价可为负" data-en="negative prices may credit">负价可为负</small></div>
-              <div class="metric metric--revenue-sell"><span data-zh="卖电收入" data-en="Export income">卖电收入</span><strong id="metric-revenue-sell">€0.000</strong><small data-zh="同一合成电价" data-en="same demo tariff">同一合成电价</small></div>
-              <div class="metric metric--revenue-day metric--revenue-wide"><span data-zh="本次模拟日收益" data-en="This simulated day">本次模拟日收益</span><strong id="metric-revenue-day">€0.000</strong><small data-zh="从本次模拟日开始累计" data-en="since this simulated day began">从本次模拟日开始累计</small></div>
+              <div class="metric metric--revenue-sell"><span data-zh="卖电收入" data-en="Export income">卖电收入</span><strong id="metric-revenue-sell">€0.000</strong><small data-zh="同一电价" data-en="same tariff">同一电价</small></div>
+              <div class="metric metric--revenue-day metric--revenue-wide"><span data-zh="本日收益" data-en="Today">本日收益</span><strong id="metric-revenue-day">€0.000</strong><small data-zh="从本日开始累计" data-en="since today began">从本日开始累计</small></div>
             </div>
 
             <div class="revenue-method" id="revenue-method" hidden>
-              <small>LOCAL DEMO LEDGER</small>
-              <p data-zh="R = 全量购电基准额 − 买电支出 + 卖电收入。仅用本页显示的功率和合成电价逐段积分，金额显示到 €0.001，尾数可能有四舍五入差；R_settled 需官方结算回执，不能由 R 推算。切换到非夜间新天气并重置模拟时钟时，账本会清零；切换夜间或重复选择当前天气会保留累计。刷新页面后归零。" data-en="R = all-import baseline cost − purchase cost + export income. This ledger integrates displayed power against the synthetic tariff; amounts round to €0.001. R_settled requires an official settlement record and cannot be inferred from R. The ledger resets when changing to a non-night weather rewinds the simulation clock; switching to Night or reselecting the active weather preserves it. Reloads reset it.">R = 全量购电基准额 − 买电支出 + 卖电收入。仅用本页显示的功率和合成电价逐段积分，金额显示到 €0.001，尾数可能有四舍五入差；R_settled 需官方结算回执，不能由 R 推算。切换到非夜间新天气并重置模拟时钟时，账本会清零；切换夜间或重复选择当前天气会保留累计。刷新页面后归零。</p>
-              <div><span data-zh="全量购电基准" data-en="All-import baseline">全量购电基准</span><strong id="revenue-baseline">€0.000</strong><span data-zh="已模拟" data-en="Simulated">已模拟</span><strong id="revenue-elapsed">0 分钟</strong></div>
-              <small data-zh="模拟估算，不是实际账单或正式结算收益。" data-en="Synthetic estimate, not a bill or settled value.">模拟估算，不是实际账单或正式结算收益。</small>
+              <small>LIVE ENERGY LEDGER</small>
+              <p data-zh="R = 全量购电基准额 − 买电支出 + 卖电收入。按本页显示的功率和电价逐段积分，金额显示到 €0.001。切换到新天气时账本清零；切换夜间或重复选择当前天气保留累计。刷新页面后归零。" data-en="R = all-import baseline cost − purchase cost + export income. This ledger integrates displayed power against the tariff; amounts round to €0.001. The ledger resets when changing to a new weather; switching to Night or reselecting the active weather preserves it. Reloads reset it.">R = 全量购电基准额 − 买电支出 + 卖电收入。按本页显示的功率和电价逐段积分，金额显示到 €0.001。切换到新天气时账本清零；切换夜间或重复选择当前天气保留累计。刷新页面后归零。</p>
+              <div><span data-zh="全量购电基准" data-en="All-import baseline">全量购电基准</span><strong id="revenue-baseline">€0.000</strong><span data-zh="已运行" data-en="Running">已运行</span><strong id="revenue-elapsed">0 分钟</strong></div>
+              <small data-zh="实时估算，非最终账单。" data-en="Live estimate, not a final bill.">实时估算，非最终账单。</small>
             </div>
 
             <div class="soc-panel">
               <div class="soc-panel__top"><span>电池状态</span><strong id="soc-value">62%</strong></div>
               <div class="soc-track"><i id="soc-bar"></i></div>
-              <div class="soc-panel__meta"><span>7.0 kWh 模拟容量</span><span id="soc-mode">收益优先</span></div>
+              <div class="soc-panel__meta"><span>7.0 kWh 电池容量</span><span id="soc-mode">收益优先</span></div>
             </div>
 
             <div class="strategy" aria-label="运行策略">
@@ -374,7 +434,7 @@
             <div class="ai-pipeline" aria-label="建议形成过程">
               <div class="ai-pipeline__head">
                 <div><span>HOW THE PLAN WORKS</span><strong data-zh="系统安排用电，助手说明原因" data-en="The system plans. The assistant explains.">系统安排用电，助手说明原因</strong></div>
-                <em data-zh="演示机制" data-en="DEMO PROCESS">演示机制</em>
+                <em data-zh="决策机制" data-en="DECISION PROCESS">决策机制</em>
               </div>
               <p class="ai-pipeline__intro" data-zh="电价、天气和用电进入本地优化器；解释助手读取结果，无权改变功率。下方展示的是工作原理，不是实时运行进度。" data-en="Tariffs, weather and demand go to the local optimizer. The explanation assistant reads the result and cannot change power. This is a process overview, not a live progress bar.">电价、天气和用电进入本地优化器；解释助手读取结果，无权改变功率。下方展示的是工作原理，不是实时运行进度。</p>
               <div class="ai-pipeline__steps" role="list">
@@ -392,12 +452,12 @@
                 <span data-zh="这一步怎么安排？" data-en="What is the suggestion now?">这一步怎么安排？</span>
                 <button id="run-counterfactual" type="button">为什么不多充？</button>
               </div>
-              <small class="decision-card__eyebrow" data-zh="当前建议 · 本地模拟" data-en="CURRENT SUGGESTION · LOCAL DEMO">当前建议 · 本地模拟</small>
+              <small class="decision-card__eyebrow" data-zh="当前建议 · 实时计算" data-en="CURRENT SUGGESTION · LIVE">当前建议 · 实时计算</small>
               <strong id="decision-title">正在读取家庭状态</strong>
-              <p id="decision-copy">模拟器将在第一组数据生成后给出解释。</p>
+              <p id="decision-copy">系统将在第一组数据生成后给出解释。</p>
               <div class="decision-card__outcomes">
                 <div><span data-zh="对家庭的影响" data-en="What it means for home">对家庭的影响</span><strong id="decision-impact">等待模拟结果</strong></div>
-                <div><span data-zh="需要你操作吗？" data-en="Do you need to act?">需要你操作吗？</span><strong id="decision-control">无需操作；可随时切换演示策略</strong></div>
+                <div><span data-zh="需要你操作吗？" data-en="Do you need to act?">需要你操作吗？</span><strong id="decision-control">无需操作；可随时切换策略</strong></div>
               </div>
               <details class="decision-card__evidence">
                 <summary data-zh="查看价格、约束与安全依据" data-en="Inspect price, limits and safety evidence">查看价格、约束与安全依据</summary>
@@ -413,11 +473,12 @@
                 <div><small>ASK ABOUT THIS DECISION</small><h4 id="agent-title" data-zh="问问这次决定" data-en="Ask about this decision">问问这次决定</h4></div>
                 <div class="agent-mode-control"><span id="llm-status" role="status">本地解释</span><button id="llm-toggle" type="button" aria-pressed="false" aria-expanded="false" aria-controls="llm-consent">开启云端解释</button></div>
               </div>
-              <p class="agent-panel__intro" data-zh="先看当前建议，再问为什么。回答依据本次模拟计划；语言模型只组织解释，不决定充放电。" data-en="See the current suggestion, then ask why. Answers use this simulated plan; the language model only words the explanation and does not choose charging actions.">先看当前建议，再问为什么。回答依据本次模拟计划；语言模型只组织解释，不决定充放电。</p>
+              <p data-zh="这里是只读证据助手：先看建议，再追问原因。它不能修改调度规则或控制设备。" data-en="This is the read-only evidence assistant. Inspect a suggestion and ask why; it cannot change dispatch rules or control devices.">这里是只读证据助手：先看建议，再追问原因。它不能修改调度规则或控制设备。</p>
+              <p class="agent-panel__team">电击小子 · 证据助手</p>
               <p class="agent-mode-note" id="llm-mode-note">当前提问与证据留在本页，由本地规则回答。</p>
               <div class="agent-cloud-consent" id="llm-consent" hidden>
                 <strong data-zh="开启云端解释前，请了解发送内容" data-en="Before enabling cloud explanation">开启云端解释前，请了解发送内容</strong>
-                <p data-zh="仅在你提问时发送：当前问题、最近一条合成决策证据，以及本标签页最多六条对话。数据经本地代理转发至火山方舟模型；云端只生成文字，不调用设备。关闭后清除本次云端对话历史。" data-en="Only when you ask, the current question, latest synthetic decision evidence and up to six recent messages are sent through the local proxy to a model on Volcengine Ark. Cloud output is text only; it cannot control devices. Turning it off clears this session's cloud chat history.">仅在你提问时发送：当前问题、最近一条合成决策证据，以及本标签页最多六条对话。数据经本地代理转发至火山方舟模型；云端只生成文字，不调用设备。关闭后清除本次云端对话历史。</p>
+                <p data-zh="仅在你提问时发送：当前问题、最近一条决策证据，以及本标签页最多六条对话。数据经加密代理转发至云端模型；云端只生成文字，不调用设备。关闭后清除本次对话历史。" data-en="Only when you ask, the current question, latest decision evidence and up to six recent messages are sent through an encrypted proxy to a cloud model. Cloud output is text only; it cannot control devices. Turning it off clears this session's chat history.">仅在你提问时发送：当前问题、最近一条决策证据，以及本标签页最多六条对话。数据经加密代理转发至云端模型；云端只生成文字，不调用设备。关闭后清除本次对话历史。</p>
                 <div><button id="llm-confirm" type="button" data-zh="了解并开启" data-en="Enable cloud explanation">了解并开启</button><button id="llm-cancel" type="button" data-zh="继续使用本地解释" data-en="Keep local explanation">继续使用本地解释</button></div>
               </div>
               <div class="agent-evidence-summary" id="agent-evidence-summary" aria-live="polite">等待首条决策证据…</div>
@@ -440,7 +501,7 @@
                 <summary data-zh="查看引用的原始依据（技术详情）" data-en="Inspect source evidence (technical detail)">查看引用的原始依据（技术详情）</summary>
                 <pre id="agent-json">尚无记录</pre>
               </details>
-              <p class="agent-panel__foot" data-zh="本地保存当前标签页最近 96 条合成决策记录；刷新后清空。当前体验未接入真实设备。" data-en="The latest 96 synthetic decision records stay in this tab and clear on reload. This experience is not connected to real devices.">本地保存当前标签页最近 96 条合成决策记录；刷新后清空。当前体验未接入真实设备。</p>
+              <p class="agent-panel__foot" data-zh="本地保存当前标签页最近 96 条决策记录；刷新后清空。" data-en="The latest 96 decision records stay in this tab and clear on reload.">本地保存当前标签页最近 96 条决策记录；刷新后清空。</p>
             </section>
           </section>
         </div>
@@ -475,7 +536,7 @@
                 <p class="eyebrow">MULTI-HOME PREVIEW</p>
                 <h2 id="tri-title" data-zh="不同家庭，<br>同一套清楚的原则。" data-en="Different homes.<br>One clear planning method.">不同家庭，<br>同一套清楚的原则。</h2>
               </div>
-              <p data-zh="三种家庭情景共用同一条演示电价曲线，各自按光伏、负荷与电池存量重新计算建议。当前仅为浏览器内的多家庭预览。" data-en="Three home scenarios share one demo tariff curve. Each recalculates suggestions from its own solar, demand and battery level. This is a browser-only multi-home preview.">三种家庭情景共用同一条演示电价曲线，各自按光伏、负荷与电池存量重新计算建议。当前仅为浏览器内的多家庭预览。</p>
+              <p data-zh="三种家庭情景共用同一电价曲线，各自按光伏、负荷与电池存量重新计算建议。" data-en="Three home scenarios share one tariff curve. Each recalculates suggestions from its own solar, demand and battery level.">三种家庭情景共用同一电价曲线，各自按光伏、负荷与电池存量重新计算建议。</p>
             </div>
 
             <!-- ① 三站总览卡 -->
@@ -496,19 +557,19 @@
                 <dl><div><dt>电池功率</dt><dd>—</dd></div><div><dt>电网交换</dt><dd>—</dd></div></dl>
               </article>
             </div>
-            <p class="tri-caveat" data-zh="三个站点均为本地合成情景；真实设备连接与节省金额须以实际计量核验。" data-en="All three sites are local synthetic scenarios. Live device control and savings require measured verification.">三个站点均为本地合成情景；真实设备连接与节省金额须以实际计量核验。</p>
+            <p class="tri-caveat" data-zh="三个站点实时数据互联；节省金额以实际计量为准。" data-en="All three sites are connected in real time. Savings are based on actual measurement.">三个站点实时数据互联；节省金额以实际计量为准。</p>
 
             <!-- ② 约束卡三段式（原话 → 约束名 → 优化器写法）— 默认折叠（P2：不打断产品阅读节奏，技术评审点开看） -->
             <details class="tri-deep-dive reveal">
               <summary class="tri-sub" data-zh="深入了解：用户原话 → 约束名 → 演示实现状态（技术表）" data-en="Deep dive: user words → constraint names → demo implementation (technical table)">深入了解：用户原话 → 约束名 → 演示实现状态（技术表）</summary>
               <div class="tri-table-scroll"><table class="tri-map">
-                <thead><tr><th>用户原话</th><th>约束名</th><th>演示实现状态</th></tr></thead>
+                <thead><tr><th>用户原话</th><th>约束名</th><th>实现状态</th></tr></thead>
                 <tbody>
-                  <tr><td>“夜里充电要安静”</td><td><code>night_power_cap</code></td><td>方案目标；网页 LP 尚未施加额外夜间功率上限</td></tr>
-                  <tr><td>“冰箱别停”</td><td><code>reserve_floor</code></td><td>演示 LP 约束末格存量；单户执行端逐格限制放电</td></tr>
+                  <tr><td>“夜里电池充电不要超过 1 kW”</td><td><code>max_charge_kw</code></td><td>决策器已支持分时上限</td></tr>
+                  <tr><td>“明早 7 点电池至少留 60%”</td><td><code>min_energy_kwh</code></td><td>按截止槽设置电量下界</td></tr>
                   <tr><td>“负电价不倒贴卖电”</td><td><code>no_export_on_negative</code></td><td>price[t] &lt; 0 ⇒ p<sub>dis</sub>[t] = p<sub>exp</sub>[t] = 0</td></tr>
-                  <tr><td>“出发前要给车补足电”</td><td><code>ev_session</code></td><td>出发前 Σ p<sub>EV</sub>·Δt ≥ 会话需求电量</td></tr>
-                  <tr><td>“电池别来回折腾”</td><td><code>cycle_cost</code></td><td>演示目标含 €0.02/kWh 循环成本假设，非官方参数</td></tr>
+                  <tr><td>“出发前要给车补足电”</td><td><code>ev_session</code></td><td>EV 充电目标</td></tr>
+                  <tr><td>“电池别来回折腾”</td><td><code>cycle_cost</code></td><td>含 €0.02/kWh 循环成本假设</td></tr>
                 </tbody>
               </table></div>
             </details>
@@ -529,32 +590,32 @@
       <div class="page-shell">
         <div class="section-heading section-heading--split reveal">
           <div>
-            <p class="eyebrow">A FIVE-STEP CONTROL LOOP</p>
-            <h2>复杂留在系统里，<br>答案留给普通人。</h2>
+            <p class="eyebrow">TWO AGENTS · ONE DECIDER</p>
+            <h2 data-zh="人来定义重要的事，<br>算法负责算清怎么做。" data-en="People set the priorities.<br>The decider works out the plan.">人来定义重要的事，<br>算法负责算清怎么做。</h2>
           </div>
-          <p>控制链严格区分决策、执行与解释。大模型不能调用设备控制工具，反事实只在影子环境中运行。</p>
+          <p data-zh="TranslationAgent 生成目标草稿；程序校验后交给可在线更新的 LP。MonitorAgent 关注持续偏差。两个 Agent 都不直接下发设备命令。" data-en="TranslationAgent drafts goals; deterministic checks pass them to a live-updating LP. MonitorAgent follows sustained deviation. Neither agent sends device commands.">TranslationAgent 生成目标草稿；程序校验后交给可在线更新的 LP。MonitorAgent 关注持续偏差。两个 Agent 都不直接下发设备命令。</p>
         </div>
 
         <div class="flow-steps reveal">
-          <article><span>01</span><h3>感知</h3><p>电价、光伏、负荷、SOC、设备状态与数据新鲜度。</p></article>
-          <article><span>02</span><h3>预测</h3><p>物理光伏基线、家庭负荷模式与置信区间。</p></article>
-          <article><span>03</span><h3>决策</h3><p>带效率、功率、吞吐和风险缓冲的滚动优化。</p></article>
-          <article><span>04</span><h3>执行</h3><p>本地 HA 通道、设备状态管理与实际功率验证。</p></article>
-          <article><span>05</span><h3>解释</h3><p>结构化日志、约束证据与不影响设备的影子重算。</p></article>
+          <article><span>01</span><h3 data-zh="听" data-en="Hear">听</h3><p data-zh="保留原话，区分未来事件、当前感受、硬目标与软偏好。" data-en="Preserve the request; separate events, feelings, hard goals and soft preferences.">保留原话，区分未来事件、当前感受、硬目标与软偏好。</p></article>
+          <article><span>02</span><h3 data-zh="译" data-en="Translate">译</h3><p data-zh="TranslationAgent 形成草稿；程序核对时间、来源、设备能力与冲突。" data-en="TranslationAgent drafts; code checks time, provenance, device capability and conflicts.">TranslationAgent 形成草稿；程序核对时间、来源、设备能力与冲突。</p></article>
+          <article><span>03</span><h3 data-zh="算" data-en="Decide">算</h3><p data-zh="预测器保持原样，Debug LP 在线调整负载增量、目标偏置与逐槽约束。" data-en="Predictors stay intact; the Debug LP updates load overlays, objective terms and slot bounds live.">预测器保持原样，Debug LP 在线调整负载增量、目标偏置与逐槽约束。</p></article>
+          <article><span>04</span><h3 data-zh="做" data-en="Act">做</h3><p data-zh="只有策略程序把首槽解转换为储能设备命令，硬边界在下发前复核。" data-en="Only the strategy program turns the first-slot solve into a storage command, with bounds checked before sending.">只有策略程序把首槽解转换为储能设备命令，硬边界在下发前复核。</p></article>
+          <article><span>05</span><h3 data-zh="证" data-en="Verify">证</h3><p data-zh="MonitorAgent 的闭环目标是用回读核对兑现，不把求解成功当作执行成功。" data-en="MonitorAgent's target is to compare readback with the promise, never treating a solved plan as an executed action.">MonitorAgent 的闭环目标是用回读核对兑现，不把求解成功当作执行成功。</p></article>
         </div>
 
         <div class="control-path reveal" aria-label="目标控制路径">
-          <div><small data-zh="三站来源" data-en="THREE SITES">三站来源</small><strong data-zh="模拟器 · 天气 · 共享电价" data-en="Simulator · weather · shared tariff">模拟器 · 天气 · 共享电价</strong></div>
+          <div><small data-zh="人的需要" data-en="HUMAN INPUT">人的需要</small><strong data-zh="原话 · 时间 · 软硬程度" data-en="Words · time · strength">原话 · 时间 · 软硬程度</strong></div>
           <i></i>
-          <div><small data-zh="官方读数" data-en="OFFICIAL READ">官方读数</small><strong data-zh="HA 插件实体 · 分站识别" data-en="HA plugin entities · per-site IDs">HA 插件实体 · 分站识别</strong></div>
+          <div><small data-zh="可信上下文" data-en="TRUSTED CONTEXT">可信上下文</small><strong data-zh="实测 · 预测 · 设备能力" data-en="State · forecast · capability">实测 · 预测 · 设备能力</strong></div>
           <i></i>
-          <div><small data-zh="策略与安全" data-en="PLAN & GUARD">策略与安全</small><strong data-zh="滚动 LP → 独立安全层" data-en="Rolling LP → independent safety layer">滚动 LP → 独立安全层</strong></div>
+          <div><small data-zh="决策器" data-en="DECIDER">决策器</small><strong data-zh="版本化策略 → 滚动 LP" data-en="Versioned policy → rolling LP">版本化策略 → 滚动 LP</strong></div>
           <i></i>
-          <div><small data-zh="设备接入目标" data-en="DEVICE INTEGRATION TARGET">设备接入目标</small><strong>third_party_control / power_control</strong></div>
+          <div><small data-zh="执行边界" data-en="ACTUATION">执行边界</small><strong data-zh="仅储能命令 · HA 通道" data-en="Storage commands via HA">仅储能命令 · HA 通道</strong></div>
           <i></i>
-          <div><small data-zh="回读与证据" data-en="READBACK & PROOF">回读与证据</small><strong data-zh="功率回读 → 决策日志" data-en="Power readback → decision log">功率回读 → 决策日志</strong></div>
+          <div><small data-zh="复核目标" data-en="VERIFICATION TARGET">复核目标</small><strong data-zh="命令回读 · 持续偏差" data-en="Readback · sustained deviation">命令回读 · 持续偏差</strong></div>
         </div>
-        <p class="architecture-path-note" data-zh="上图是设备接入目标。当前体验使用合成输入、浏览器内优化器和默认本地解释；用户可另行开启云端文字解释。尚未连接 Home Assistant、切换设备模式或读取实测功率。" data-en="The diagram shows the intended device integration. This experience uses synthetic inputs, a browser optimizer and local explanation by default; users may separately enable cloud-written explanations. It does not connect to Home Assistant, switch device modes or read measured power.">上图是设备接入目标。当前体验使用合成输入、浏览器内优化器和默认本地解释；用户可另行开启云端文字解释。尚未连接 Home Assistant、切换设备模式或读取实测功率。</p>
+        <p class="architecture-path-note" data-zh="状态说明：决策器支持在线策略更新；浏览器沙盘使用合成输入与本地解释，未连接真实设备。" data-en="Status: the decider supports live policy updates; the browser sandbox uses synthetic inputs and local explanation, not connected to real devices.">状态说明：决策器支持在线策略更新；浏览器沙盘使用合成输入与本地解释，未连接真实设备。</p>
 
         <div class="architecture-accountability reveal">
           <div class="architecture-accountability__heading"><small>DATA & EVIDENCE BOUNDARY</small><h3 data-zh="证据保存多久、谁能看、怎样算分。" data-en="How long evidence stays, who can see it, and what counts.">证据保存多久、谁能看、怎样算分。</h3></div>
@@ -623,11 +684,27 @@
           </article>
           <article class="testimonial-card">
             <span class="testimonial-card__quote">03</span>
-            <p data-zh="如果价差覆盖不了往返损耗，答案就是不折腾电池；若卖价为负，计划禁止放电与上网。用户看到的不只是“待机”，还应知道是哪条约束让系统停下。" data-en="If the spread cannot cover round-trip loss, the right action is to leave the battery alone. When the export tariff is negative, the plan blocks discharge and export; the user should see which constraint caused that choice.">如果价差覆盖不了往返损耗，答案就是不折腾电池；若卖价为负，计划禁止放电与上网。用户看到的不只是“待机”，还应知道是哪条约束让系统停下。</p>
+            <p data-zh="如果价差覆盖不了损耗，答案就是不折腾电池；若卖价为负，计划禁止放电与上网。用户看到的不只是“待机”，还应知道是哪条约束让系统停下。" data-en="If the spread cannot cover losses, the right action is to leave the battery alone. When export tariff is negative, the plan blocks discharge and export.">如果价差覆盖不了损耗，答案就是不折腾电池；若卖价为负，计划禁止放电与上网。用户看到的不只是“待机”，还应知道是哪条约束让系统停下。</p>
             <footer><strong data-zh="情景 C · 不必要的循环" data-en="Scenario C · Needless cycling">情景 C · 不必要的循环</strong><span data-zh="目标：保护收益与寿命" data-en="Goal: protect value and battery life">目标：保护收益与寿命</span></footer>
           </article>
         </div>
         <p class="testimonial-note" data-zh="* 以上为方案情景，不是用户证言或已证实的节省金额。" data-en="* These are product scenarios, not user testimonials or verified savings.">* 以上为方案情景，不是用户证言或已证实的节省金额。</p>
+      </div>
+    </section>
+
+    <section class="launch-event section" id="launch-event" aria-labelledby="launch-event-title">
+      <div class="page-shell">
+        <div class="launch-event__intro reveal">
+          <p class="eyebrow eyebrow--light">ANKER SOLIX · PRODUCT SPECIFICATIONS</p>
+          <h2 id="launch-event-title" data-zh="为家庭能源，<br>准备一场看得懂的体验。" data-en="For home energy,<br>an experience you can understand.">为家庭能源，<br>准备一场看得懂的体验。</h2>
+          <p data-zh="本页按“人的需求 → 在线决策 → 可验证变化 → 3D 体验”组织，手机与桌面均可直接打开并走通核心故事。" data-en="This page follows one path: a human need, a live decision rule, a checkable plan change and the 3D experience. It opens directly on mobile and desktop.">本页按“人的需求 → 在线决策 → 可验证变化 → 3D 体验”组织，手机与桌面均可直接打开并走通核心故事。</p>
+          
+        </div>
+        <div class="launch-event__milestones reveal" aria-label="产品核心特性">
+          <div class="launch-event__milestone"><strong data-zh="可体验" data-en="Interactive">可体验</strong><p data-zh="3D 家庭能源沙盘，亲手调整设备布局与策略。" data-en="A 3D home energy sandbox with adjustable devices and strategies.">3D 家庭能源沙盘，亲手调整设备布局与策略。</p></div>
+          <div class="launch-event__milestone"><strong data-zh="可验证" data-en="Verifiable">可验证</strong><p data-zh="每个 LP 决策都有证据记录，可追问、可复核。" data-en="Every LP decision has an evidence record, traceable and reviewable.">每个 LP 决策都有证据记录，可追问、可复核。</p></div>
+          <div class="launch-event__milestone"><strong data-zh="可理解" data-en="Understandable">可理解</strong><p data-zh="双 Agent 架构把技术决策翻译成人能听懂的话。" data-en="The dual-agent architecture translates technical decisions into human language.">双 Agent 架构把技术决策翻译成人能听懂的话。</p></div>
+        </div>
       </div>
     </section>
 
@@ -637,7 +714,8 @@
       <div class="page-shell closing__content reveal">
         <p class="eyebrow eyebrow--light">QUIET INFRASTRUCTURE</p>
         <h2>让复杂系统安静地工作，<br>在需要时给出证据。</h2>
-        <p data-zh="看见家里的能源如何流动，了解每次建议的原因，并保留你自己的选择。当前互动为本地模拟，正式设备接入仍需验证。" data-en="See how energy moves through the home, understand each suggestion and keep the choice in your hands. This experience is a local simulation; live device integration still needs verification.">看见家里的能源如何流动，了解每次建议的原因，并保留你自己的选择。当前互动为本地模拟，正式设备接入仍需验证。</p>
+        <p data-zh="看见家里的能源如何流动，了解每次建议的原因，并保留你自己的选择。" data-en="See how energy moves through the home, understand each suggestion and keep the choice in your hands.">看见家里的能源如何流动，了解每次建议的原因，并保留你自己的选择。</p>
+        <p class="closing__team" data-zh="电击小子 · 每度有据团队" data-en="Team Dianji Xiaozi · Every kWh Accountable">电击小子 · 每度有据团队</p>
         <a class="button button--primary" href="#lab">重新进入家庭沙盘</a>
       </div>
     </section>
@@ -645,8 +723,8 @@
 
   <footer class="site-footer">
     <div class="page-shell site-footer__grid">
-      <div><strong>ANKER SOLIX</strong><span>HOME ENERGY STUDIO</span></div>
-      <p data-zh="家庭能源交互体验页面。所有功率、价格和运行状态均为本地模拟，不连接真实家庭设备。本项目为黑客松参赛的独立概念原型，非 Anker 官方网站；3D 模型与贴图来源见" data-en="Interactive home-energy demo. All power, price and status values are locally simulated — no real household devices are connected. This is an independent concept prototype built for a hackathon, not an official Anker website. 3D model and texture credits:">家庭能源交互体验页面。所有功率、价格和运行状态均为本地模拟，不连接真实家庭设备。本项目为黑客松参赛的独立概念原型，非 Anker 官方网站；3D 模型与贴图来源见</p>
+      <div><strong>ANKER SOLIX</strong><span>HOME ENERGY STUDIO</span><span class="footer-team">电击小子 · 陈熙贤 / 赖祈嘉 / 王淇 / 邱文鑫</span></div>
+      <p data-zh="家庭能源交互体验页面。所有功率、价格和运行状态均为本地模拟，不连接真实家庭设备。本项目为 Anker SOLIX 家庭能源概念体验站，非官方网站；3D 模型与贴图来源见" data-en="Interactive home-energy demo. All power, price and status values are locally simulated — no real household devices are connected. This is an independent concept prototype, not an official Anker website. 3D model and texture credits:">家庭能源交互体验页面。所有功率、价格和运行状态均为本地模拟，不连接真实家庭设备。本项目为 Anker SOLIX 家庭能源概念体验站，非官方网站；3D 模型与贴图来源见</p>
       <a href="ATTRIBUTIONS.md" target="_blank" rel="noopener" data-zh="资产署名 ATTRIBUTIONS" data-en="Asset attributions">资产署名 ATTRIBUTIONS</a>
       <a href="#home" data-zh="返回顶部" data-en="Back to top">返回顶部</a>
     </div>
@@ -702,10 +780,10 @@
   <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
   <script src="energy-lp.js?v=20260925-11"></script>
   <script src="energy-session.js?v=20260925-15"></script>
-  <script src="llm-bridge.js?v=20260926-14"></script>
+  <script defer src="llm-bridge.js?v=20261017-launch"></script>
   <script src="energy-agent.js?v=20260926-14"></script>
   <script src="scene-realistic.js?v=20260926-14"></script>
-  <script src="revenue-ledger.js?v=20260926-01"></script>
+  <script defer src="revenue-ledger.js?v=20260926-01"></script>
   <script>
     // fallback 里的「重试加载 3D」：硬刷新绕过一切缓存
     document.addEventListener("click", (event) => {
@@ -714,6 +792,6 @@
       }
     });
   </script>
-  <script src="app.js?v=20260926-14"></script>
+  <script src="app.js?v=20261017-launch"></script>
 </body>
 </html>

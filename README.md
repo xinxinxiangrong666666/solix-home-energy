@@ -1,6 +1,8 @@
-# 每度有据 · Anker SOLIX 家庭能源工作室
+# 每度有据 · 家庭能源产品发布页
 
-**Home Energy Studio — 可视、可解释、可追溯的家庭能源调度演示**
+**让家庭的需要进入能源决策：双 Agent 产品叙事、在线可调 LP 与 3D 演示**
+
+> 2026-10-17：本目录已更新为黑客松决赛产品发布页。以下 GitHub Pages 地址是此前公开版本；本地改版尚未推送或发布。
 
 [![Live Demo](https://img.shields.io/badge/%F0%9F%8C%90_%E5%9C%A8%E7%BA%BF%E4%BD%93%E9%AA%8C-Live_Demo-F58220?style=for-the-badge)](https://xinxinxiangrong666666.github.io/solix-home-energy/)
 
@@ -16,11 +18,14 @@
 
 ## 这是什么
 
-这是 Anker SOLIX Home Energy Studio 的**独立产品官网原型**，为 Anker 充电储能赛道黑客松构建：
+这是面向 Anker 充电储能赛道黑客松的**独立产品发布原型**。页面按“用户需要 → 在线决策 → 离线证据 → 3D 体验”组织：
+
+- **新的产品链路**：TranslationAgent 的流程规范已写成 `LQJ_Using/Anker_ChargingAndEnergyStorage/Anker_ChargingAndEnergyStorage/AnkerProject_DJXZ_Debug/skills/translation-agent/SKILL.md`；Debug 决策器已能逐 tick 热加载版本化策略，调整负载增量、目标偏置和分时硬约束。Chatbot 与 MonitorAgent 的完整应用闭环仍待接入。
+- **可核对的离线对照**：`assets/decision-policy-comparison.png` 源自 Debug LP 的 160 槽固定输入试算。硬性 07:00 SOC≥60% 将计划从 0% 调整到 60%，对应计划购售电净成本增加约 €0.43。输入使用本地模拟记录的未来实际值，是开环 oracle 敏感性分析，不是实际收益或预测回测。
 
 - **一个真实运行的能源调度系统**：浏览器端线性规划（LP）滚动求解电池充放电计划，读取电价、光伏、家庭负荷与备电约束；
 - **一个可走进去的 3D 能源孪生场景**：Three.js 室内家庭 + 室外车位一体化场景，家具可拖拽布置，电力链路完整可视；
-- **一个会解释的 AI 助手**：每个调度决策都能追问"为什么现在充电/为什么不多充"，回答全部引用可点开的证据 JSON——AI 只组织文字，永不决定功率。
+- **一个会解释的浏览器助手**：每个模拟决策都能追问"为什么现在充电/为什么不多充"，回答引用可点开的证据 JSON。此助手是只读演示组件，不等同于尚待接入的 TranslationAgent。
 
 页面参考 Anker SOLIX 官方产品页的内容层级、黑白高对比与橙色行动点风格，不复制官方源码。
 
@@ -78,9 +83,9 @@
 
 ## 立即运行
 
-### 在线版（推荐）
+### 此前公开版
 
-直接打开：**https://xinxinxiangrong666666.github.io/solix-home-energy/**
+**https://xinxinxiangrong666666.github.io/solix-home-energy/** 当前不代表本目录的最新发布页改动。
 
 ### 本地运行
 
@@ -91,16 +96,9 @@ python -m http.server 4173
 # 浏览器访问 http://127.0.0.1:4173/
 ```
 
-### 启用云端解释（可选）
+### 云端解释（可选）
 
-配置服务端 `ARK_API_KEY` 或 `LLM_API_KEY` 环境变量后：
-
-```powershell
-python serve.py 4173
-```
-
-- 代理默认仅监听 `127.0.0.1`，key 只存在服务端环境变量，**永远不进入前端代码**；
-- 没有可用代理时，页面自动降级为本地解释，其余功能不受影响。
+本目录是纯静态站，不含旧文档提到的 `serve.py`。默认只使用浏览器内本地解释；如需云端文字解释，须由可信后端提供 `/api/health` 与 `/api/chat`，并由用户在页面主动开启。不要把模型密钥写入前端文件。
 
 ---
 

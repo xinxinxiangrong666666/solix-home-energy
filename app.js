@@ -443,7 +443,7 @@
 
   function applyStaticLanguage() {
     document.documentElement.lang = state.lang === "en" ? "en" : "zh-CN";
-    document.title = state.lang === "en" ? "Anker SOLIX | Home Energy Studio" : "Anker SOLIX｜Home Energy Studio";
+    document.title = state.lang === "en" ? "Every Kilowatt-Hour, Explained | Home Energy" : "每度有据｜让家庭的需要进入能源决策";
     /* 双语属性渲染（data-zh / data-en）：证言区等新增模块走这套机制，
      * innerHTML 是必须的——标题里含 <br> 标签 */
     $$("[data-zh]").forEach((el) => {

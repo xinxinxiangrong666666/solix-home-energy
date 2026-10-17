@@ -2,6 +2,11 @@
 
 本页面是 Anker SOLIX 家庭能源交互概念原型。第三方 3D 资产均保留其许可和署名；Anker SOLIX 产品图仅用于按真实产品外形制作产品体验场景，不作为通用素材再分发。
 
+## 决策策略对照图
+
+- 文件：`assets/decision-policy-comparison.png`
+- 生成方式：本项目 Debug 决策器的 `Tools/evaluate_decision_policy.py` 使用一段本地模拟赛记录中的未来实际光伏、负荷和电价，固定输入重算不同策略。该图由团队代码生成，不是官方成绩、实际设备回读或真实账单。
+
 ## Anker SOLIX Solarbank Max AC
 
 - 来源：[Anker SOLIX Solarbank Max AC 官方产品页](https://www.ankersolix.com/fr/products/a17e2)

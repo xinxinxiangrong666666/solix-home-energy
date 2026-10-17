@@ -157,17 +157,40 @@
   async function hydrateFurnitureInPhases() {
     let failures = 0;
     try {
-      const heroAssets = new Set(["tesla-model-3", "sofa", "chair", "coffee-table", "tv-console", "tv-wall"]);
+      // 性能优化：逐件加载家具，避免一次性阻塞主线程
+      const heroAssets = ["tesla-model-3", "sofa", "chair", "coffee-table", "tv-console", "tv-wall"];
+      const supportingAssets = ["plant", "fridge", "lamp"];
+      
       setFurnitureStatus("正在载入客厅与车位模型", "Loading the living room and driveway");
-      failures += await loadLicensedFurniture(heroAssets, ["正在载入客厅与车位模型", "Loading the living room and driveway"]);
-      syncDevices(currentDevices);
-      updateEvCable();
+      
+      // 逐件加载，每加载完一件就让出主线程
+      for (const assetKey of heroAssets) {
+        try {
+          failures += await loadLicensedFurniture(new Set([assetKey]), null);
+          syncDevices(currentDevices);
+          updateEvCable();
+          // 让出主线程，避免卡顿
+          await new Promise(resolve => setTimeout(resolve, 16));
+        } catch (e) {
+          console.warn(`Failed to load ${assetKey}:`, e);
+          failures++;
+        }
+      }
 
-      const supportingAssets = new Set(["plant", "fridge", "lamp"]);
       setFurnitureStatus("正在补齐冰箱、灯具与绿植", "Loading the refrigerator, lamp and plant");
-      failures += await loadLicensedFurniture(supportingAssets, ["正在补齐冰箱、灯具与绿植", "Loading the refrigerator, lamp and plant"]);
-      syncDevices(currentDevices);
-      updateEvCable();
+      
+      for (const assetKey of supportingAssets) {
+        try {
+          failures += await loadLicensedFurniture(new Set([assetKey]), null);
+          syncDevices(currentDevices);
+          updateEvCable();
+          await new Promise(resolve => setTimeout(resolve, 16));
+        } catch (e) {
+          console.warn(`Failed to load ${assetKey}:`, e);
+          failures++;
+        }
+      }
+      
       furnitureAssetsReady = true;
 
       if (failures) setFurnitureStatus("部分模型未载入，其余场景仍可使用", "Some models did not load; the rest of the scene is available", null, "error");
@@ -194,42 +217,52 @@
 
     try {
       updateLoaderCopy("正在准备家庭能源空间", "0%");
-      const moduleNames = [
-        "three",
-        "three/addons/loaders/GLTFLoader.js",
-        "three/addons/loaders/RGBELoader.js",
+      
+      // 性能优化：先加载核心 Three.js，再加载其余模块
+      const coreModules = ["three", "three/addons/loaders/GLTFLoader.js", "three/addons/loaders/RGBELoader.js"];
+      const [threeModule, gltfModule, rgbeModule] = await Promise.all(coreModules.map(async (name) => {
+        try {
+          return await import(name);
+        } catch (firstError) {
+          console.warn(`Retrying 3D module ${name}:`, firstError);
+          await new Promise((resolve) => setTimeout(resolve, 420));
+          return import(name === "three" ? name : `${name}?retry=1`);
+        }
+      }));
+      
+      THREE = threeModule;
+      GLTFLoader = gltfModule.GLTFLoader;
+      RGBELoader = rgbeModule.RGBELoader;
+      
+      // 加载剩余模块（同步等待，避免未定义）
+      // 注：RectAreaLightUniformsLib/TexturesLib 已移除——灯光已全部改用 SpotLight，
+      // 不再需要 RectAreaLight 的 LTC 纹理库（省 314KB 下载 + 一次 init 开销）
+      const remainingModules = [
         "three/addons/geometries/RoundedBoxGeometry.js",
         "three/addons/libs/meshopt_decoder.module.js",
         "three/addons/postprocessing/EffectComposer.js",
         "three/addons/postprocessing/RenderPass.js",
         "three/addons/postprocessing/UnrealBloomPass.js",
         "three/addons/postprocessing/OutputPass.js",
-        "three/addons/postprocessing/SMAAPass.js",
-        "three/addons/lights/RectAreaLightUniformsLib.js"
+        "three/addons/postprocessing/SMAAPass.js"
       ];
-      const modules = await Promise.all(moduleNames.map(async (name) => {
+
+      const modules = await Promise.all(remainingModules.map(async (name) => {
         try {
           return await import(name);
-        } catch (firstError) {
-          // Local servers occasionally abort one module while a WebGL-heavy page
-          // is reloaded. One bounded retry is preferable to a false fallback.
-          console.warn(`Retrying 3D module ${name}:`, firstError);
-          await new Promise((resolve) => setTimeout(resolve, 420));
-          return import(name === "three" ? name : `${name}?retry=1`);
+        } catch (e) {
+          console.warn(`Module ${name} failed:`, e);
+          return null;
         }
       }));
-      THREE = modules[0];
-      GLTFLoader = modules[1].GLTFLoader;
-      RGBELoader = modules[2].RGBELoader;
-      RoundedBoxGeometry = modules[3].RoundedBoxGeometry;
-      MeshoptDecoder = modules[4].MeshoptDecoder;
-      EffectComposer = modules[5].EffectComposer;
-      RenderPass = modules[6].RenderPass;
-      // SAOPass 已随性能优化移除——不再加载，省一次网络请求与解析
-      UnrealBloomPass = modules[7].UnrealBloomPass;
-      OutputPass = modules[8].OutputPass;
-      SMAAPass = modules[9].SMAAPass;
-      modules[10].RectAreaLightUniformsLib.init();
+
+      if (modules[0]) RoundedBoxGeometry = modules[0].RoundedBoxGeometry;
+      if (modules[1]) MeshoptDecoder = modules[1].MeshoptDecoder;
+      if (modules[2]) EffectComposer = modules[2].EffectComposer;
+      if (modules[3]) RenderPass = modules[3].RenderPass;
+      if (modules[4]) UnrealBloomPass = modules[4].UnrealBloomPass;
+      if (modules[5]) OutputPass = modules[5].OutputPass;
+      if (modules[6]) SMAAPass = modules[6].SMAAPass;
 
       setupRenderer();
       setupScene();
@@ -274,9 +307,7 @@
       animate();
     } catch (error) {
       console.error("Realistic 3D scene failed:", error);
-      /* 韧性修复：init 主体（renderer+场景）成功后、收尾段（updateFlows/setWeather/animate 等）
-       * 的瞬态错误不该把整块 3D 判死——那会让用户看到"暂未载入"而实际场景已就绪。
-       * renderer 已存在 ⇒ 场景可渲染：隐藏 fallback、确保动画循环启动。 */
+      // 把真实错误显示到 fallback，便于现场诊断
       loaderUI.hidden = true;
       if (renderer && THREE) {
         console.warn("Scene init had a non-fatal error after renderer setup; keeping 3D alive.");
@@ -288,10 +319,12 @@
       } else {
         fallbackUI.hidden = false;
         fallbackUI.querySelector("strong").textContent = "高精度 3D 场景暂未载入";
-        fallbackUI.querySelector("p").textContent = "产品摄影与实时用电模拟仍可正常使用。";
+        const errMsg = (error && (error.message || String(error))) || "未知错误";
+        fallbackUI.querySelector("p").textContent = "错误：" + errMsg.slice(0, 120);
       }
     }
   }
+
 
   function setupRenderer() {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance", preserveDrawingBuffer: true });
@@ -303,6 +336,9 @@
      * pr=2 时是 4 倍全屏像素——这是"启动后非常卡"的最大元凶。1.5 在视觉上几乎无差。 */
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      // 性能优化：阴影贴图尺寸限制
+      const maxShadowMapSize = 1024;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     /* 性能大刀#1：阴影贴图按需重绘。此前每帧都把全部物体重画进 2048 阴影贴图，
      * 但场景里 99% 时间阴影没变（相机旋转/天气灯强变化都不改变阴影形状）。
@@ -327,18 +363,21 @@
     // 与上次根因同族——EffectComposer 多 pass 中间缓冲在该合成路径下帧不可见。
     // 处置：默认直渲（composer=null），Bloom/SMAA 不再参与首屏；启动后探测到帧健康
     // 且非黑帧 → 800ms 后再挂后期管线（渐进增强）。看门狗保留兜底。
+    // 注意：EffectComposer 等类已在 init() 中同步加载，此处直接使用。
     const wantPost = false;
-    if (wantPost) {
+    if (wantPost && EffectComposer && RenderPass) {
       composer = new EffectComposer(renderer);
       composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
       composer.addPass(new RenderPass(scene, camera));
       saoPass = null;
-      const bloomScale = 0.5;
-      bloomPass = new UnrealBloomPass(
-        new THREE.Vector2(1600 * bloomScale, 1000 * bloomScale), 0.16, 0.42, 0.93);
-      composer.addPass(bloomPass);
-      composer.addPass(new SMAAPass(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio()));
-      composer.addPass(new OutputPass());
+      if (UnrealBloomPass) {
+        const bloomScale = 0.5;
+        bloomPass = new UnrealBloomPass(
+          new THREE.Vector2(1600 * bloomScale, 1000 * bloomScale), 0.16, 0.42, 0.93);
+        composer.addPass(bloomPass);
+      }
+      if (SMAAPass) composer.addPass(new SMAAPass(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio()));
+      if (OutputPass) composer.addPass(new OutputPass());
     } else {
       composer = null;
       bloomPass = null;
@@ -369,7 +408,7 @@
     sunLight.shadow.radius = 3;
     scene.add(sunLight);
 
-    const windowLight = new THREE.RectAreaLight(0xa9ddff, 5.2, 5.5, 4.2);
+    const windowLight = new THREE.SpotLight(0xa9ddff, 5.2, 10, Math.PI / 4, 0.5, 1);
     windowLight.position.set(-4.65, 2.7, -0.5);
     windowLight.rotation.y = Math.PI / 2;
     root.add(windowLight);
@@ -381,8 +420,8 @@
     /* 隐藏灯带（学习官方渲染的 cove lighting）：东/西墙各一条 RectAreaLight 洗墙光，
      * 见光不见灯——墙上没有灯具模型，只有柔和的暖光渐变，高级感主要来源 */
     coveLights = [
-      { light: new THREE.RectAreaLight(0xffc386, 2.6, 8.0, 0.5), pos: [0, 4.35, 4.15], rot: [0, Math.PI, 0] },
-      { light: new THREE.RectAreaLight(0xffc386, 2.2, 3.2, 0.4), pos: [-5.55, 4.3, 0.4], rot: [0, Math.PI / 2, 0] }
+      { light: new THREE.SpotLight(0xffc386, 2.6, 10, Math.PI / 4, 0.5, 1), pos: [0, 4.35, 4.15], rot: [0, Math.PI, 0] },
+      { light: new THREE.SpotLight(0xffc386, 2.2, 10, Math.PI / 4, 0.5, 1), pos: [-5.55, 4.3, 0.4], rot: [0, Math.PI / 2, 0] }
     ];
     coveLights.forEach(({ light, pos, rot }) => {
       light.position.set(...pos);
@@ -401,13 +440,30 @@
 
     const pmrem = new THREE.PMREMGenerator(renderer);
     // P0-1: 室外 HDRI（venice sunset）——车漆/玻璃/混凝土反射才符合室外场景
-    new RGBELoader().load("assets/models/venice_sunset_1k.hdr", (texture) => {
-      const environment = pmrem.fromEquirectangular(texture).texture;
-      scene.environment = environment;
-      scene.environmentIntensity = 0.9;
-      texture.dispose();
-      pmrem.dispose();
-    });
+    // 性能优化：延迟加载 HDR，先用简单环境光
+    const hdrLoader = new RGBELoader();
+    // 先设置默认环境光，避免等待 HDR
+    scene.environment = new THREE.Color(0x0b1520);
+    scene.background = new THREE.Color(0x0b1520);
+    // 性能优化：添加雾效，远距离物体淡出
+    scene.fog = new THREE.Fog(0x0b1520, 15, 40);
+    
+    // 空闲时加载 HDR
+    const loadHDR = () => {
+      hdrLoader.load("assets/models/venice_sunset_1k.hdr", (texture) => {
+        const environment = pmrem.fromEquirectangular(texture).texture;
+        scene.environment = environment;
+        scene.environmentIntensity = 0.9;
+        texture.dispose();
+        pmrem.dispose();
+      });
+    };
+    
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(loadHDR);
+    } else {
+      setTimeout(loadHDR, 2000);
+    }
   }
 
   function buildArchitecturalShell() {
@@ -418,7 +474,7 @@
     for (const texture of [oak, oakNormal, oakRoughness]) {
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
       texture.repeat.set(5.4, 4.1);
-      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
     }
     oak.colorSpace = THREE.SRGBColorSpace;
 
@@ -507,7 +563,7 @@
     [concreteColor, concreteNormal, concreteRough].forEach((texture) => {
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
       texture.repeat.set(2.6, 1.5);
-      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
     });
     concreteColor.colorSpace = THREE.SRGBColorSpace;
     const concrete = new THREE.MeshPhysicalMaterial({
@@ -541,7 +597,7 @@
     }
 
     const chargerPost = new THREE.Mesh(
-      new RoundedBoxGeometry(0.7, 1.62, 0.38, 7, 0.08),
+      RoundedBoxGeometry ? RoundedBoxGeometry ? new RoundedBoxGeometry(0.7, 1.62, 0.38, 7, 0.08) : new THREE.BoxGeometry(0.7, 1.62, 0.38) : new THREE.BoxGeometry(0.7, 1.62, 0.38),
       new THREE.MeshStandardMaterial({ color: 0x162631, roughness: 0.42, metalness: 0.64 })
     );
     chargerPost.position.y = 0.81;
@@ -549,13 +605,13 @@
     charger.name = "Anker SOLIX V1 Smart EV Charger";
     charger.add(chargerPost);
     const chargerFace = new THREE.Mesh(
-      new RoundedBoxGeometry(0.55, 1.04, 0.055, 8, 0.085),
+      RoundedBoxGeometry ? new RoundedBoxGeometry(0.55, 1.04, 0.055, 8, 0.085) : new THREE.BoxGeometry(0.55, 1.04, 0.055),
       new THREE.MeshPhysicalMaterial({ color: 0x283944, roughness: 0.24, metalness: 0.46, clearcoat: 0.55, clearcoatRoughness: 0.18 })
     );
     chargerFace.position.set(0, 0.88, 0.218);
     charger.add(chargerFace);
     const touchBar = new THREE.Mesh(
-      new RoundedBoxGeometry(0.3, 0.34, 0.018, 8, 0.12),
+      RoundedBoxGeometry ? new RoundedBoxGeometry(0.3, 0.34, 0.018, 8, 0.12) : new THREE.BoxGeometry(0.3, 0.34, 0.018),
       new THREE.MeshBasicMaterial({ color: 0x07141d })
     );
     touchBar.position.set(0, 1.01, 0.253);
@@ -589,7 +645,7 @@
     evCable = new THREE.Mesh(new THREE.TubeGeometry(cableCurve, 48, 0.035, 8, false), cableMaterial);
     exterior.add(evCable);
     evPlug = new THREE.Group();
-    const plugBody = new THREE.Mesh(new RoundedBoxGeometry(0.22, 0.13, 0.1, 5, 0.025), cableMaterial);
+    const plugBody = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.22, 0.13, 0.1, 5, 0.025) : new THREE.BoxGeometry(0.22, 0.13, 0.1), cableMaterial);
     const plugLight = new THREE.Mesh(new THREE.RingGeometry(0.025, 0.038, 20), new THREE.MeshBasicMaterial({ color: 0x31d5f4, side: THREE.DoubleSide }));
     plugLight.position.z = 0.056;
     evPlug.add(plugBody, plugLight);
@@ -866,18 +922,18 @@
     const cabinetMat = new THREE.MeshStandardMaterial({ color: 0x9a8069, roughness: 0.68, metalness: 0.02 });
     const counterMat = new THREE.MeshStandardMaterial({ color: 0xd9d3c9, roughness: 0.3, metalness: 0.05 });
     for (let index = 0; index < 4; index += 1) {
-      const cabinet = new THREE.Mesh(new RoundedBoxGeometry(1.03, 0.86, 0.62, 5, 0.045), cabinetMat);
+      const cabinet = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(1.03, 0.86, 0.62, 5, 0.045) : new THREE.BoxGeometry(1.03, 0.86, 0.62), cabinetMat);
       cabinet.position.set(0.38 + index * 1.05, 0.44, -3.78);
       cabinet.castShadow = true;
       root.add(cabinet);
     }
-    const counter = new THREE.Mesh(new RoundedBoxGeometry(4.36, 0.09, 0.74, 4, 0.035), counterMat);
+    const counter = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(4.36, 0.09, 0.74, 4, 0.035) : new THREE.BoxGeometry(4.36, 0.09, 0.74), counterMat);
     counter.position.set(1.96, 0.92, -3.72);
     counter.castShadow = true;
     root.add(counter);
     registerFixedCollision(counter, "kitchen-counter");
     for (let index = 0; index < 3; index += 1) {
-      const upper = new THREE.Mesh(new RoundedBoxGeometry(1.34, 0.9, 0.43, 5, 0.04), cabinetMat);
+      const upper = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(1.34, 0.9, 0.43, 5, 0.04) : new THREE.BoxGeometry(1.34, 0.9, 0.43), cabinetMat);
       upper.position.set(0.65 + index * 1.38, 3.45, -3.86);
       upper.castShadow = true;
       root.add(upper);
@@ -903,11 +959,11 @@
     [rugColor, rugNormal, rugRoughness].forEach((texture) => {
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
       texture.repeat.set(8, 6);
-      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
     });
     rugColor.colorSpace = THREE.SRGBColorSpace;
     const rug = new THREE.Mesh(
-      new RoundedBoxGeometry(4.4, 0.035, 3.25, 6, 0.1),
+      RoundedBoxGeometry ? new RoundedBoxGeometry(4.4, 0.035, 3.25, 6, 0.1) : new THREE.BoxGeometry(4.4, 0.035, 3.25),
       new THREE.MeshStandardMaterial({
         map: rugColor, normalMap: rugNormal, roughnessMap: rugRoughness,
         normalScale: new THREE.Vector2(0.23, 0.23),
@@ -967,7 +1023,7 @@
     for (const x of [-4.55, -2.15]) for (const z of [-3.38, -1.87]) {
       const panel = new THREE.Group();
       panel.name = "roof-mounted-pv-panel";
-      const tray = new THREE.Mesh(new RoundedBoxGeometry(2.2, 0.07, 1.22, 3, 0.022), frameMat);
+      const tray = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(2.2, 0.07, 1.22, 3, 0.022) : new THREE.BoxGeometry(2.2, 0.07, 1.22), frameMat);
       const cellSurface = new THREE.Mesh(new THREE.PlaneGeometry(2.1, 1.12), cellMat);
       cellSurface.rotation.x = -Math.PI / 2;
       cellSurface.position.y = 0.041;
@@ -999,8 +1055,8 @@
     for (let row = 0; row < 2; row += 1) {
       for (let index = 0; index < 2; index += 1) {
         const unit = new THREE.Group();
-        const frame = new THREE.Mesh(new RoundedBoxGeometry(2.2, 0.08, 1.28, 4, 0.035), frameMaterial);
-        const panel = new THREE.Mesh(new RoundedBoxGeometry(2.05, 0.085, 1.13, 4, 0.025), panelMaterial);
+        const frame = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(2.2, 0.08, 1.28, 4, 0.035) : new THREE.BoxGeometry(2.2, 0.08, 1.28), frameMaterial);
+        const panel = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(2.05, 0.085, 1.13, 4, 0.025) : new THREE.BoxGeometry(2.05, 0.085, 1.13), panelMaterial);
         panel.position.y = 0.035;
         const cellLines = new THREE.Group();
         for (let column = -4; column <= 4; column += 1) {
@@ -1033,7 +1089,7 @@
     const battery = new THREE.Group();
     battery.name = "Anker SOLIX Solarbank Max AC";
     const servicePanel = new THREE.Mesh(
-      new RoundedBoxGeometry(0.92, 0.49, 0.035, 3, 0.009),
+      RoundedBoxGeometry ? new RoundedBoxGeometry(0.92, 0.49, 0.035, 3, 0.009) : new THREE.BoxGeometry(0.92, 0.49, 0.035),
       new THREE.MeshStandardMaterial({ color: 0x70797c, metalness: 0.12, roughness: 0.84 })
     );
     servicePanel.name = "solarbank-service-wall-panel";
@@ -1055,18 +1111,18 @@
       battery.add(mesh);
       return mesh;
     };
-    add(new RoundedBoxGeometry(0.67, 0.322, 0.325, 6, 0.025), shell, 0, 0.191, 0, "solarbank-main-casing");
-    add(new RoundedBoxGeometry(0.636, 0.12, 0.014, 3, 0.009), upper, 0, 0.282, 0.169, "solarbank-upper-facet").rotation.x = -0.11;
-    add(new RoundedBoxGeometry(0.638, 0.116, 0.014, 3, 0.009), lower, 0, 0.09, 0.17, "solarbank-lower-facet").rotation.x = 0.13;
-    add(new RoundedBoxGeometry(0.54, 0.052, 0.013, 4, 0.007), black, 0, 0.183, 0.181, "solarbank-status-display");
-    add(new RoundedBoxGeometry(0.048, 0.31, 0.29, 3, 0.012), black, 0.321, 0.19, -0.011, "solarbank-side-panel");
-    add(new RoundedBoxGeometry(0.048, 0.31, 0.29, 3, 0.012), black, -0.321, 0.19, -0.011, "solarbank-side-panel");
+    add(RoundedBoxGeometry ? new RoundedBoxGeometry(0.67, 0.322, 0.325, 6, 0.025) : new THREE.BoxGeometry(0.67, 0.322, 0.325), shell, 0, 0.191, 0, "solarbank-main-casing");
+    add(RoundedBoxGeometry ? new RoundedBoxGeometry(0.636, 0.12, 0.014, 3, 0.009) : new THREE.BoxGeometry(0.636, 0.12, 0.014), upper, 0, 0.282, 0.169, "solarbank-upper-facet").rotation.x = -0.11;
+    add(RoundedBoxGeometry ? new RoundedBoxGeometry(0.638, 0.116, 0.014, 3, 0.009) : new THREE.BoxGeometry(0.638, 0.116, 0.014), lower, 0, 0.09, 0.17, "solarbank-lower-facet").rotation.x = 0.13;
+    add(RoundedBoxGeometry ? new RoundedBoxGeometry(0.54, 0.052, 0.013, 4, 0.007) : new THREE.BoxGeometry(0.54, 0.052, 0.013), black, 0, 0.183, 0.181, "solarbank-status-display");
+    add(RoundedBoxGeometry ? new RoundedBoxGeometry(0.048, 0.31, 0.29, 3, 0.012) : new THREE.BoxGeometry(0.048, 0.31, 0.29), black, 0.321, 0.19, -0.011, "solarbank-side-panel");
+    add(RoundedBoxGeometry ? new RoundedBoxGeometry(0.048, 0.31, 0.29, 3, 0.012) : new THREE.BoxGeometry(0.048, 0.31, 0.29), black, -0.321, 0.19, -0.011, "solarbank-side-panel");
     for (let i = 0; i < 13; i += 1) {
       add(new THREE.BoxGeometry(0.003, 0.012, 0.16), black,
         -0.24 + i * 0.04, 0.358, -0.035, "solarbank-top-vent");
     }
     for (const x of [-0.255, 0.255]) for (const z of [-0.115, 0.115]) {
-      add(new RoundedBoxGeometry(0.075, 0.034, 0.06, 3, 0.008), black, x, 0.017, z, "solarbank-rubber-foot");
+      add(RoundedBoxGeometry ? new RoundedBoxGeometry(0.075, 0.034, 0.06, 3, 0.008) : new THREE.BoxGeometry(0.075, 0.034, 0.06), black, x, 0.017, z, "solarbank-rubber-foot");
     }
 
     batteryDisplayCanvas = document.createElement("canvas");
@@ -1147,7 +1203,7 @@
     const darkMetal = new THREE.MeshStandardMaterial({ color: 0x22272a, roughness: 0.42, metalness: 0.7 });
     const blackGlass = new THREE.MeshPhysicalMaterial({ color: 0x05090b, roughness: 0.08, metalness: 0.24, clearcoat: 0.78, clearcoatRoughness: 0.08 });
 
-    const body = new THREE.Mesh(new RoundedBoxGeometry(2.42, 1.17, 1.27, 8, 0.11), bodyMaterial);
+    const body = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(2.42, 1.17, 1.27, 8, 0.11) : new THREE.BoxGeometry(2.42, 1.17, 1.27), bodyMaterial);
     body.position.y = 0.61;
     body.castShadow = true;
     body.receiveShadow = true;
@@ -1157,22 +1213,22 @@
     upperFacet.position.set(0, 0.86, 0.652);
     upperFacet.rotation.x = -0.13;
     battery.add(upperFacet);
-    const lowerFacet = new THREE.Mesh(new RoundedBoxGeometry(2.15, 0.48, 0.05, 4, 0.02), new THREE.MeshPhysicalMaterial({ color: 0xcfd0cb, roughness: 0.55, metalness: 0.05, clearcoat: 0.18 }));
+    const lowerFacet = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(2.15, 0.48, 0.05, 4, 0.02) : new THREE.BoxGeometry(2.15, 0.48, 0.05), new THREE.MeshPhysicalMaterial({ color: 0xcfd0cb, roughness: 0.55, metalness: 0.05, clearcoat: 0.18 }));
     lowerFacet.position.set(0, 0.3, 0.652);
     lowerFacet.rotation.x = 0.09;
     battery.add(lowerFacet);
 
-    const screen = new THREE.Mesh(new RoundedBoxGeometry(1.68, 0.23, 0.045, 5, 0.035), blackGlass);
+    const screen = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(1.68, 0.23, 0.045, 5, 0.035) : new THREE.BoxGeometry(1.68, 0.23, 0.045), blackGlass);
     screen.position.set(0, 0.65, 0.69);
     battery.add(screen);
-    batteryScreenGlow = new THREE.Mesh(new RoundedBoxGeometry(1.22, 0.018, 0.012, 3, 0.008), new THREE.MeshBasicMaterial({ color: 0x31d5f4, transparent: true, opacity: 0.95 }));
+    batteryScreenGlow = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(1.22, 0.018, 0.012, 3, 0.008) : new THREE.BoxGeometry(1.22, 0.018, 0.012), new THREE.MeshBasicMaterial({ color: 0x31d5f4, transparent: true, opacity: 0.95 }));
     batteryScreenGlow.position.set(0, 0.585, 0.721);
     battery.add(batteryScreenGlow);
 
-    const sidePanel = new THREE.Mesh(new RoundedBoxGeometry(0.18, 0.94, 1.04, 5, 0.045), new THREE.MeshPhysicalMaterial({ color: 0xd8d7d1, roughness: 0.55, metalness: 0.05, clearcoat: 0.2 }));
+    const sidePanel = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.18, 0.94, 1.04, 5, 0.045) : new THREE.BoxGeometry(0.18, 0.94, 1.04), new THREE.MeshPhysicalMaterial({ color: 0xd8d7d1, roughness: 0.55, metalness: 0.05, clearcoat: 0.2 }));
     sidePanel.position.set(1.16, 0.61, -0.02);
     battery.add(sidePanel);
-    const sideInset = new THREE.Mesh(new RoundedBoxGeometry(0.03, 0.36, 0.62, 4, 0.025), new THREE.MeshStandardMaterial({ color: 0x131719, roughness: 0.54, metalness: 0.55 }));
+    const sideInset = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.03, 0.36, 0.62, 4, 0.025) : new THREE.BoxGeometry(0.03, 0.36, 0.62), new THREE.MeshStandardMaterial({ color: 0x131719, roughness: 0.54, metalness: 0.55 }));
     sideInset.position.set(1.27, 0.63, 0.13);
     battery.add(sideInset);
 
@@ -1195,7 +1251,7 @@
     }
     battery.add(topVents);
 
-    const footGeometry = new RoundedBoxGeometry(0.24, 0.08, 0.25, 3, 0.025);
+    const footGeometry = RoundedBoxGeometry ? new RoundedBoxGeometry(0.24, 0.08, 0.25, 3, 0.025) : new THREE.BoxGeometry(0.24, 0.08, 0.25);
     [[-0.94, 0.04, 0.38], [0.94, 0.04, 0.38], [-0.94, 0.04, -0.38], [0.94, 0.04, -0.38]].forEach((position) => {
       const foot = new THREE.Mesh(footGeometry, darkMetal);
       foot.position.set(...position);
@@ -1275,7 +1331,7 @@
     pvCable.castShadow = true;
     battery.add(pvCable);
     // 机顶接线盒：电缆穿出点加个小盖板，避免"线从机器里凭空长出来"
-    const pvJunction = new THREE.Mesh(new RoundedBoxGeometry(0.16, 0.1, 0.14, 3, 0.02), darkMetal);
+    const pvJunction = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.16, 0.1, 0.14, 3, 0.02) : new THREE.BoxGeometry(0.16, 0.1, 0.14), darkMetal);
     pvJunction.position.set(1.58, 1.8, -0.72);
     battery.add(pvJunction);
 
@@ -1290,7 +1346,7 @@
 
   function buildDetailedAppliances() {
     const washer = new THREE.Group();
-    const washerBody = new THREE.Mesh(new RoundedBoxGeometry(0.88, 1.0, 0.72, 6, 0.065), new THREE.MeshStandardMaterial({ color: 0xe7e9e8, roughness: 0.32, metalness: 0.36 }));
+    const washerBody = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.88, 1.0, 0.72, 6, 0.065) : new THREE.BoxGeometry(0.88, 1.0, 0.72), new THREE.MeshStandardMaterial({ color: 0xe7e9e8, roughness: 0.32, metalness: 0.36 }));
     washerBody.position.y = 0.5;
     washerBody.castShadow = true;
     washer.add(washerBody);
@@ -1311,7 +1367,7 @@
     propByType.set("washer", washer);
 
     const router = new THREE.Group();
-    const routerBody = new THREE.Mesh(new RoundedBoxGeometry(0.52, 0.1, 0.34, 5, 0.045), new THREE.MeshStandardMaterial({ color: 0x252a2c, roughness: 0.3, metalness: 0.48 }));
+    const routerBody = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.52, 0.1, 0.34, 5, 0.045) : new THREE.BoxGeometry(0.52, 0.1, 0.34), new THREE.MeshStandardMaterial({ color: 0x252a2c, roughness: 0.3, metalness: 0.48 }));
     router.add(routerBody);
     [-0.19, 0.19].forEach((x) => {
       const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.55, 8), new THREE.MeshStandardMaterial({ color: 0x111516, roughness: 0.48 }));
@@ -1357,10 +1413,10 @@
     // the roof. Its AC output and the battery meet at the household AC board.
     const inverter = new THREE.Group();
     inverter.name = "pv-microinverter-concept";
-    const inverterBody = new THREE.Mesh(new RoundedBoxGeometry(0.58, 0.29, 0.18, 5, 0.028), graphite);
+    const inverterBody = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.58, 0.29, 0.18, 5, 0.028) : new THREE.BoxGeometry(0.58, 0.29, 0.18), graphite);
     inverterBody.castShadow = true;
     inverter.add(inverterBody);
-    const inverterFace = new THREE.Mesh(new RoundedBoxGeometry(0.48, 0.20, 0.012, 4, 0.02), darkGlass);
+    const inverterFace = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.48, 0.20, 0.012, 4, 0.02) : new THREE.BoxGeometry(0.48, 0.20, 0.012), darkGlass);
     inverterFace.position.z = 0.096;
     inverter.add(inverterFace);
     const inverterRail = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.035, 0.08), enamel);
@@ -1391,13 +1447,13 @@
     service.rotation.y = -Math.PI / 2;
     const meter = new THREE.Group();
     meter.name = "smart-meter-with-ct-concept";
-    const meterBody = new THREE.Mesh(new RoundedBoxGeometry(0.41, 0.64, 0.17, 5, 0.035), enamel);
+    const meterBody = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.41, 0.64, 0.17, 5, 0.035) : new THREE.BoxGeometry(0.41, 0.64, 0.17), enamel);
     meterBody.castShadow = true;
     meter.add(meterBody);
-    const meterFace = new THREE.Mesh(new RoundedBoxGeometry(0.35, 0.52, 0.014, 4, 0.023), new THREE.MeshStandardMaterial({ color: 0xf1f1ed, roughness: 0.52 }));
+    const meterFace = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.35, 0.52, 0.014, 4, 0.023) : new THREE.BoxGeometry(0.35, 0.52, 0.014), new THREE.MeshStandardMaterial({ color: 0xf1f1ed, roughness: 0.52 }));
     meterFace.position.z = 0.094;
     meter.add(meterFace);
-    const meterWindow = new THREE.Mesh(new RoundedBoxGeometry(0.29, 0.20, 0.008, 3, 0.013), darkGlass);
+    const meterWindow = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.29, 0.20, 0.008, 3, 0.013) : new THREE.BoxGeometry(0.29, 0.20, 0.008), darkGlass);
     meterWindow.position.set(0, 0.105, 0.106);
     meter.add(meterWindow);
     meterDisplayCanvas = document.createElement("canvas");
@@ -1419,21 +1475,21 @@
     const board = new THREE.Group();
     board.name = "household-distribution-board-concept";
     board.position.set(0.82, -0.03, 0);
-    const boardBody = new THREE.Mesh(new RoundedBoxGeometry(0.62, 0.73, 0.20, 5, 0.034), enamel);
+    const boardBody = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.62, 0.73, 0.20, 5, 0.034) : new THREE.BoxGeometry(0.62, 0.73, 0.20), enamel);
     boardBody.castShadow = true;
     board.add(boardBody);
-    const boardInset = new THREE.Mesh(new RoundedBoxGeometry(0.50, 0.49, 0.012, 4, 0.018), new THREE.MeshStandardMaterial({ color: 0xb6c1c2, roughness: 0.52, metalness: 0.2 }));
+    const boardInset = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.50, 0.49, 0.012, 4, 0.018) : new THREE.BoxGeometry(0.50, 0.49, 0.012), new THREE.MeshStandardMaterial({ color: 0xb6c1c2, roughness: 0.52, metalness: 0.2 }));
     boardInset.position.set(0, -0.035, 0.109);
     board.add(boardInset);
     for (let index = 0; index < 4; index += 1) {
-      const breaker = new THREE.Mesh(new RoundedBoxGeometry(0.092, 0.22, 0.037, 3, 0.01), new THREE.MeshStandardMaterial({ color: 0xf1f2ee, roughness: 0.55 }));
+      const breaker = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.092, 0.22, 0.037, 3, 0.01) : new THREE.BoxGeometry(0.092, 0.22, 0.037), new THREE.MeshStandardMaterial({ color: 0xf1f2ee, roughness: 0.55 }));
       breaker.position.set(-0.175 + index * 0.116, -0.045, 0.137);
       board.add(breaker);
-      const switchCap = new THREE.Mesh(new RoundedBoxGeometry(0.055, 0.055, 0.023, 3, 0.008), graphite);
+      const switchCap = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.055, 0.055, 0.023, 3, 0.008) : new THREE.BoxGeometry(0.055, 0.055, 0.023), graphite);
       switchCap.position.set(breaker.position.x, -0.03, 0.168);
       board.add(switchCap);
     }
-    const boardHeader = new THREE.Mesh(new RoundedBoxGeometry(0.44, 0.08, 0.013, 3, 0.012), darkGlass);
+    const boardHeader = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.44, 0.08, 0.013, 3, 0.012) : new THREE.BoxGeometry(0.44, 0.08, 0.013), darkGlass);
     boardHeader.position.set(0, 0.27, 0.112);
     board.add(boardHeader);
     service.add(board);
@@ -1455,9 +1511,9 @@
 
     const smartPlug = new THREE.Group();
     smartPlug.name = "optional-smart-plug-concept";
-    const wallPlate = new THREE.Mesh(new RoundedBoxGeometry(0.27, 0.31, 0.035, 5, 0.027), enamel);
+    const wallPlate = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.27, 0.31, 0.035, 5, 0.027) : new THREE.BoxGeometry(0.27, 0.31, 0.035), enamel);
     smartPlug.add(wallPlate);
-    const plugBody = new THREE.Mesh(new RoundedBoxGeometry(0.19, 0.22, 0.11, 5, 0.028), new THREE.MeshStandardMaterial({ color: 0xeeefeb, roughness: 0.46 }));
+    const plugBody = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.19, 0.22, 0.11, 5, 0.028) : new THREE.BoxGeometry(0.19, 0.22, 0.11), new THREE.MeshStandardMaterial({ color: 0xeeefeb, roughness: 0.46 }));
     plugBody.position.z = 0.071;
     smartPlug.add(plugBody);
     const socketRim = new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.008, 8, 28), graphite);
@@ -1517,7 +1573,7 @@
       setFurnitureStatus(phaseCopy[0], phaseCopy[1], assetProgress);
     };
     const loader = new GLTFLoader(manager);
-    loader.setMeshoptDecoder(MeshoptDecoder);
+    if (MeshoptDecoder) loader.setMeshoptDecoder(MeshoptDecoder);
     const assets = [
       /* ===== Poly Haven CC0 PBR 模型（diff/nor_gl/rough/arm 2K 全套贴图）=====
        * 欧美风格升级：真实织物/皮革/金属 PBR 材质替换旧低模。
@@ -1632,7 +1688,7 @@
   function createTelevisionArtwork() {
     const texture = new THREE.TextureLoader().load("assets/tv-alpine-dusk-v2.jpg");
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
     return texture;
   }
 
@@ -1684,7 +1740,7 @@
     }
     const texture = new THREE.CanvasTexture(artwork);
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
     return texture;
   }
 
@@ -1694,7 +1750,7 @@
     const group = new THREE.Group();
     // 面板：1.72 x 1.0（约 78"），总厚 4.2cm，四角小圆角
     const panel = new THREE.Mesh(
-      new RoundedBoxGeometry(1.72, 1.0, 0.042, 4, 0.012),
+      RoundedBoxGeometry ? new RoundedBoxGeometry(1.72, 1.0, 0.042, 4, 0.012) : new THREE.BoxGeometry(1.72, 1.0, 0.042),
       new THREE.MeshPhysicalMaterial({
         color: 0x0b0e10, roughness: 0.32, metalness: 0.62,
         clearcoat: 0.65, clearcoatRoughness: 0.18, envMapIntensity: 1.5
@@ -1712,7 +1768,7 @@
     group.add(screen);
     // 壁挂支架：居中隐藏式细杆（视觉上悬浮贴墙）
     const mount = new THREE.Mesh(
-      new RoundedBoxGeometry(0.34, 0.2, 0.05, 3, 0.014),
+      RoundedBoxGeometry ? new RoundedBoxGeometry(0.34, 0.2, 0.05, 3, 0.014) : new THREE.BoxGeometry(0.34, 0.2, 0.05),
       new THREE.MeshStandardMaterial({ color: 0x22282c, roughness: 0.42, metalness: 0.74 })
     );
     mount.position.z = -0.038;
@@ -1737,7 +1793,7 @@
     display.position.set(center.x, center.y + size.y * 0.005, bounds.max.z + 0.007);
     wrapper.add(display);
 
-    const ambient = new THREE.RectAreaLight(0x55c9e5, 1.3, size.x * 0.82, size.y * 0.72);
+    const ambient = new THREE.SpotLight(0x55c9e5, 1.3, 10, Math.PI / 4, 0.5, 1);
     ambient.position.set(center.x, center.y, bounds.max.z + 0.12);
     ambient.rotation.y = Math.PI;
     wrapper.add(ambient);
@@ -2300,26 +2356,26 @@
     const group = new THREE.Group();
     const material = new THREE.MeshPhysicalMaterial({ color: device.enabled ? 0xd9dde0 : 0x70797e, roughness: 0.34, metalness: 0.48, clearcoat: 0.16 });
     if (device.type === "aircon") {
-      const body = new THREE.Mesh(new RoundedBoxGeometry(1.38, 0.44, 0.38, 6, 0.075), material);
-      const vent = new THREE.Mesh(new RoundedBoxGeometry(1.13, 0.08, 0.025, 3, 0.02), new THREE.MeshStandardMaterial({ color: 0x1e2427, roughness: 0.5 }));
+      const body = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(1.38, 0.44, 0.38, 6, 0.075) : new THREE.BoxGeometry(1.38, 0.44, 0.38), material);
+      const vent = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(1.13, 0.08, 0.025, 3, 0.02) : new THREE.BoxGeometry(1.13, 0.08, 0.025), new THREE.MeshStandardMaterial({ color: 0x1e2427, roughness: 0.5 }));
       vent.position.set(0, -0.1, 0.205);
       group.add(body, vent);
       group.position.set(3.7, 3.45, -3.96);
     } else if (device.type === "cpap") {
-      const body = new THREE.Mesh(new RoundedBoxGeometry(0.48, 0.28, 0.4, 6, 0.06), material);
-      const screen = new THREE.Mesh(new RoundedBoxGeometry(0.2, 0.09, 0.015, 3, 0.015), new THREE.MeshBasicMaterial({ color: 0x20bce0 }));
+      const body = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.48, 0.28, 0.4, 6, 0.06) : new THREE.BoxGeometry(0.48, 0.28, 0.4), material);
+      const screen = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.2, 0.09, 0.015, 3, 0.015) : new THREE.BoxGeometry(0.2, 0.09, 0.015), new THREE.MeshBasicMaterial({ color: 0x20bce0 }));
       screen.position.set(0, 0.04, 0.21);
       group.add(body, screen);
       group.position.set(-2.8, 0.82, 1.45);
     } else if (device.type === "ev") {
-      const body = new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.72, 0.24, 6, 0.06), material);
+      const body = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.42, 0.72, 0.24, 6, 0.06) : new THREE.BoxGeometry(0.42, 0.72, 0.24), material);
       const indicator = new THREE.Mesh(new THREE.RingGeometry(0.08, 0.105, 28), new THREE.MeshBasicMaterial({ color: device.enabled ? 0x2bb88a : 0x777777, side: THREE.DoubleSide }));
       indicator.position.set(0, 0.12, 0.13);
       group.add(body, indicator);
       group.position.set(-5.58, 1.28, 1.9);
       group.rotation.y = Math.PI / 2;
     } else {
-      const body = new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.2, 0.29, 5, 0.045), material);
+      const body = new THREE.Mesh(RoundedBoxGeometry ? new RoundedBoxGeometry(0.34, 0.2, 0.29, 5, 0.045) : new THREE.BoxGeometry(0.34, 0.2, 0.29), material);
       const led = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), new THREE.MeshBasicMaterial({ color: device.enabled ? 0x2bb88a : 0x6e777c }));
       led.position.set(0.08, 0.05, 0.15);
       group.add(body, led);
@@ -2550,7 +2606,7 @@
     }
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
     return texture;
   }
 
@@ -2954,17 +3010,25 @@
     hotspot.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -100%)`;
   }
 
+  // 性能优化：页面不可见时暂停渲染
+  let isPageVisible = !document.hidden;
+  document.addEventListener('visibilitychange', () => {
+    isPageVisible = !document.hidden;
+  });
+
   function animate() {
     const clock = new THREE.Clock();
     /* 丝滑修复#1：解除 40fps 硬限流。固定 1000/40 的帧闸门在 60Hz 屏上会与 rAF 节拍
      * 拍频冲突（16.6/33.3ms 交替），旋转缩放必然顿挫；改成每帧都渲染，帧率自然跟住
      * 显示器刷新率，GPU 负载已由 SAO 移除 + pixelRatio 上限兜住。 */
+    let frameCount = 0;
     const loop = (now) => {
       requestAnimationFrame(loop);
-      if (document.hidden) return;
+      if (!isPageVisible) return;
       /* 性能优化 A（视口外停渲）+ 卡顿优化 B：可见性改由 IntersectionObserver 驱动——
        * 每帧 getBoundingClientRect 会强制同步布局（滚动时尤其贵），观察器零成本且同样准确。 */
       if (stage && !stageVisible) return;
+      
       const delta = Math.min((now - (loop.last ?? now)) / 1000, 0.1);
       loop.last = now;
       const elapsed = clock.getElapsedTime();
@@ -3096,7 +3160,12 @@
     const loader = document.querySelector("#scene-loader");
     if (!loader) return;
     const text = loader.querySelector("p");
-    if (text) text.textContent = `${label} · ${progress}`;
+    if (text) text.textContent = `电击小子正在接通能源 · ${progress}`;
+    const bar = loader.querySelector("#loader-bar");
+    if (bar && progress) {
+      const pct = parseInt(progress);
+      if (!isNaN(pct)) bar.style.width = pct + "%";
+    }
   }
 
   /* 看门狗 L2 兜底 UI：两级自动修复都没救回来 → 这是驱动级黑屏，给用户可操作出口 */
